@@ -17,6 +17,8 @@ public class DependencyInjectionGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        context.RegisterPostInitializationOutput(context => context.AddSource("GenerateAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
+
         var syntaxProvider = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax && methodSyntax.AttributeLists.Count > 0,
@@ -64,16 +66,34 @@ public class DependencyInjectionGenerator : IIncrementalGenerator
                     };
 
                     var types = GetTypesFromAssembly(assembly)
-                        .Where(t => !t.IsAbstract && !t.IsStatic)
-                        .Where(t => assignableTo is null || t.Interfaces.Contains(assignableTo));
+                        .Where(t => !t.IsAbstract && !t.IsStatic && t.TypeKind == TypeKind.Class);
 
                     bool anyFound = false;
 
                     foreach (var t in types)
                     {
+                        var implementationType = t;
+
+                        INamedTypeSymbol matchedType = null;
+                        if (assignableTo != null && !IsAssignableTo(implementationType, assignableTo, out matchedType))
+                            continue;
+
                         anyFound = true;
-                        sb.AppendLine();
-                        sb.Append($"            .Add{lifetime}<{(assignableTo ?? t).ToDisplayString()}, {t.ToDisplayString()}>()");
+
+                        var serviceType = matchedType ?? assignableTo ?? implementationType;
+
+                        if (implementationType.IsGenericType)
+                        {
+                            implementationType = implementationType.ConstructUnboundGenericType();
+
+                            sb.AppendLine();
+                            sb.Append($"            .Add{lifetime}(typeof({serviceType.ToDisplayString()}), typeof({implementationType.ToDisplayString()}))");
+                        }
+                        else
+                        {
+                            sb.AppendLine();
+                            sb.Append($"            .Add{lifetime}<{serviceType.ToDisplayString()}, {implementationType.ToDisplayString()}>()");
+                        }
                     }
 
                     if (!anyFound)
@@ -106,23 +126,57 @@ public class DependencyInjectionGenerator : IIncrementalGenerator
             });
     }
 
-    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo)
+    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol matchedType)
     {
         if (SymbolEqualityComparer.Default.Equals(type, assignableTo))
-            return true;
-
-        if (assignableTo.TypeKind == TypeKind.Interface)
-            return type.Interfaces.Contains(assignableTo, SymbolEqualityComparer.Default);
-
-        var baseType = type.BaseType;
-        while (baseType != null)
         {
-            if (SymbolEqualityComparer.Default.Equals(baseType, assignableTo))
-                return true;
-
-            baseType = baseType.BaseType;
+            matchedType = type;
+            return true;
         }
 
+        if (assignableTo.IsUnboundGenericType)
+        {
+            if (assignableTo.TypeKind == TypeKind.Interface)
+            {
+                var matchingInterface = type.Interfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.ConstructUnboundGenericType(), assignableTo));
+                matchedType = matchingInterface;
+                return matchingInterface != null;
+            }
+
+            var baseType = type.BaseType;
+            while (baseType != null)
+            {
+                if (baseType.IsGenericType && SymbolEqualityComparer.Default.Equals(baseType.ConstructUnboundGenericType(), assignableTo))
+                {
+                    matchedType = baseType;
+                    return true;
+                }
+
+                baseType = baseType.BaseType;
+            }
+        }
+        else
+        {
+            if (assignableTo.TypeKind == TypeKind.Interface)
+            {
+                matchedType = assignableTo;
+                return type.Interfaces.Contains(assignableTo, SymbolEqualityComparer.Default);
+            }
+
+            var baseType = type.BaseType;
+            while (baseType != null)
+            {
+                if (SymbolEqualityComparer.Default.Equals(baseType, assignableTo))
+                {
+                    matchedType = baseType;
+                    return true;
+                }
+
+                baseType = baseType.BaseType;
+            }
+        }
+
+        matchedType = null;
         return false;
     }
 

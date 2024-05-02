@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 
 // Tests
@@ -15,22 +16,15 @@ namespace DependencyInjection.SourceGenerator
 {
     public static partial class Test
     {
-        [Generate(AssignableTo = typeof(IService<string>), Lifetime = ServiceLifetime.Scoped)]
+        [Generate(AssignableTo = typeof(IService), Lifetime = ServiceLifetime.Scoped)]
+        [Generate(FromAssemblyOf = typeof(IEnumerable), AssignableTo = typeof(IEnumerable), Lifetime = ServiceLifetime.Singleton)]
+        [Generate(FromAssemblyOf = typeof(List<>), AssignableTo = typeof(IEnumerable), Lifetime = ServiceLifetime.Transient)]
         public static partial IServiceCollection AddServices(this IServiceCollection services);
     }
 
-    public interface IService<T> { }
+    public interface IService { }
 
-    public class MyService : IService<string> { }
-
-    [Conditional("CODE_ANALYSIS")]
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class GenerateAttribute : Attribute
-    {
-        public Type FromAssemblyOf { get; set; }
-        public Type AssignableTo { get; set; }
-        public ServiceLifetime Lifetime { get; set; }
-        public bool AsImplementedInterfaces { get; set; }
-        public string TypeNameFilter { get; set; }
-    }
+    public class MyService1 : IService { }
+    public class MyService2 : IService { }
+    public class MyService3 : IService { }
 }
