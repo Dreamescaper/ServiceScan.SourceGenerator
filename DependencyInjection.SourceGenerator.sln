@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34825.169
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjection.SourceGenerator.Tests", "DependencyInjection.SourceGenerator.Tests\DependencyInjection.SourceGenerator.Tests.csproj", "{5DA34BB9-9122-483B-A427-45FC78025815}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection.SourceGenerator", "DependencyInjection.SourceGenerator\DependencyInjection.SourceGenerator.csproj", "{5C56A256-7DF0-4E8B-9280-6AB76247E039}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5DA34BB9-9122-483B-A427-45FC78025815}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DA34BB9-9122-483B-A427-45FC78025815}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DA34BB9-9122-483B-A427-45FC78025815}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DA34BB9-9122-483B-A427-45FC78025815}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C56A256-7DF0-4E8B-9280-6AB76247E039}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C56A256-7DF0-4E8B-9280-6AB76247E039}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C56A256-7DF0-4E8B-9280-6AB76247E039}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C56A256-7DF0-4E8B-9280-6AB76247E039}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {97D548F3-75D2-436F-9FC4-0770B4080DEA}
+	EndGlobalSection
+EndGlobal
