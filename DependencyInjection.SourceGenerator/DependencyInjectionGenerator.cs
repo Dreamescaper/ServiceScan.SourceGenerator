@@ -1,15 +1,18 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace DependencyInjection.SourceGenerator;
 
 [Generator]
-public class DependencyInjectionGenerator : IIncrementalGenerator
+public partial class DependencyInjectionGenerator : IIncrementalGenerator
 {
+    //static MethodModel Previous;
+    //static int Iteration = 0;
+
     private static readonly DiagnosticDescriptor NotPartialDefinition = new("DI001", "Error shouldn't happen", "Test", "DI", DiagnosticSeverity.Error, true);
     private static readonly DiagnosticDescriptor WrongReturnType = new("DI002", "Error shouldn't happen", "Test", "DI", DiagnosticSeverity.Error, true);
     private static readonly DiagnosticDescriptor WrongMethodParameters = new("DI003", "Error shouldn't happen", "Test", "DI", DiagnosticSeverity.Error, true);
@@ -19,51 +22,59 @@ public class DependencyInjectionGenerator : IIncrementalGenerator
     {
         context.RegisterPostInitializationOutput(context => context.AddSource("GenerateAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
 
-        var syntaxProvider = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax && methodSyntax.AttributeLists.Count > 0,
-                transform: static (node, ct) => node.SemanticModel.GetDeclaredSymbol(node.Node) as IMethodSymbol)
-            .Where(method => method != null && method.IsPartialDefinition && method.GetAttributes()
-                .Any(a => a.AttributeClass.ToDisplayString() == "DependencyInjection.SourceGenerator.GenerateAttribute"));
+        var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName("DependencyInjection.SourceGenerator.GenerateAttribute",
+                predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax,
+                transform: static (context, ct) =>
+                {
+                    if (context.TargetSymbol is not IMethodSymbol method)
+                        return null;
+
+                    if (!method.IsPartialDefinition)
+                        return null;
+
+                    var serviceCollectionType = context.SemanticModel.Compilation.GetTypeByMetadataName("Microsoft.Extensions.DependencyInjection.IServiceCollection");
+                    var attributeType = context.SemanticModel.Compilation.GetTypeByMetadataName("DependencyInjection.SourceGenerator.GenerateAttribute");
+
+                    if (serviceCollectionType is null)
+                        return null;
+
+                    if (!method.ReturnsVoid && !SymbolEqualityComparer.Default.Equals(method.ReturnType, serviceCollectionType))
+                        return null;
+
+                    if (method.Parameters.Length != 1 || !SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, serviceCollectionType))
+                        return null;
+
+                    var attributeData = context.Attributes.Select(AttributeModel.Create);
+                    var model = MethodModel.Create(method, attributeData);
+
+                    //if (Previous != null && !model.Equals(Previous))
+                    //    Debugger.Launch();
+
+                    //Previous = model;
+
+                    return model;
+                })
+            .Where(method => method != null);
 
         // We require all matching type symbols, and create the generated files.
-        context.RegisterImplementationSourceOutput(syntaxProvider,
-            static (context, method) =>
+        context.RegisterImplementationSourceOutput(methodProvider.Combine(context.CompilationProvider),
+            static (context, src) =>
             {
-                if (!method.IsPartialDefinition)
-                {
-                    context.ReportDiagnostic(Diagnostic.Create(NotPartialDefinition, method.Locations[0]));
-                    return;
-                }
+                var model = src.Left;
+                var compilation = src.Right;
 
-                if (!method.ReturnsVoid && method.ReturnType.ToDisplayString() != "Microsoft.Extensions.DependencyInjection.IServiceCollection")
-                {
-                    context.ReportDiagnostic(Diagnostic.Create(WrongReturnType, method.Locations[0]));
-                    return;
-                }
-
-                if (method.Parameters.Length != 1 || method.Parameters[0].Type.ToDisplayString() != "Microsoft.Extensions.DependencyInjection.IServiceCollection")
-                {
-                    context.ReportDiagnostic(Diagnostic.Create(WrongMethodParameters, method.Locations[0]));
-                    return;
-                }
-
-                //Debugger.Launch();
+                //var sw = Stopwatch.StartNew();
 
                 var sb = new StringBuilder();
+                var attributes = model.Attributes;
 
-                foreach (var attribute in method.GetAttributes().Where(a => a.AttributeClass.ToDisplayString() == "DependencyInjection.SourceGenerator.GenerateAttribute"))
+                foreach (var attribute in attributes.Items)
                 {
-                    var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
-                    var assembly = assemblyType?.ContainingAssembly ?? method.ContainingAssembly;
-                    var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
-                    var lifetime = attribute.NamedArguments.FirstOrDefault(a => a.Key == "Lifetime").Value.Value as int? switch
-                    {
-                        0 => "Singleton",
-                        1 => "Scoped",
-                        2 => "Transient",
-                        _ => "Singleton"
-                    };
+                    var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? model.TypeMetadataName).ContainingAssembly;
+
+                    var assignableToType = attribute.AssignableToTypeName is null
+                        ? null
+                        : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
 
                     var types = GetTypesFromAssembly(assembly)
                         .Where(t => !t.IsAbstract && !t.IsStatic && t.TypeKind == TypeKind.Class);
@@ -75,54 +86,59 @@ public class DependencyInjectionGenerator : IIncrementalGenerator
                         var implementationType = t;
 
                         INamedTypeSymbol matchedType = null;
-                        if (assignableTo != null && !IsAssignableTo(implementationType, assignableTo, out matchedType))
+                        if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
                             continue;
 
                         anyFound = true;
 
-                        var serviceType = matchedType ?? assignableTo ?? implementationType;
+                        var serviceType = matchedType ?? assignableToType ?? implementationType;
 
                         if (implementationType.IsGenericType)
                         {
                             implementationType = implementationType.ConstructUnboundGenericType();
 
                             sb.AppendLine();
-                            sb.Append($"            .Add{lifetime}(typeof({serviceType.ToDisplayString()}), typeof({implementationType.ToDisplayString()}))");
+                            sb.Append($"            .Add{attribute.Lifetime}(typeof({serviceType.ToDisplayString()}), typeof({implementationType.ToDisplayString()}))");
                         }
                         else
                         {
                             sb.AppendLine();
-                            sb.Append($"            .Add{lifetime}<{serviceType.ToDisplayString()}, {implementationType.ToDisplayString()}>()");
+                            sb.Append($"            .Add{attribute.Lifetime}<{serviceType.ToDisplayString()}, {implementationType.ToDisplayString()}>()");
                         }
                     }
 
                     if (!anyFound)
                     {
-                        context.ReportDiagnostic(Diagnostic.Create(NoMatchingTypesFound, method.Locations[0]));
+                        //context.ReportDiagnostic(Diagnostic.Create(NoMatchingTypesFound, method.Locations[0]));
                         return;
                     }
                 }
 
-                var @namespace = method.ContainingNamespace.ToDisplayString();
-                var type = method.ContainingType;
-                var returnType = method.ReturnsVoid ? "void" : "IServiceCollection";
+                var returnType = model.ReturnsVoid ? "void" : "IServiceCollection";
 
 
                 var source = $$"""
                 using Microsoft.Extensions.DependencyInjection;
 
-                namespace {{@namespace}};
+                namespace {{model.Namespace}};
 
-                {{GetAccessModifier(type)}} {{IsStatic(type)}} partial class {{type.Name}}
+                {{model.TypeAccessModifier}} {{model.TypeStatic}} partial class {{model.TypeName}}
                 {
-                    {{GetAccessModifier(method)}} {{IsStatic(method)}} partial {{returnType}} {{method.Name}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
+                    {{model.MethodAccessModifier}} {{model.MethodStatic}} partial {{returnType}} {{model.MethodName}}({{(model.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
                     {
-                        {{(method.ReturnsVoid ? "" : "return ")}}services{{sb}};
+                        {{(model.ReturnsVoid ? "" : "return ")}}services{{sb}};
                     }
                 }
                 """;
 
-                context.AddSource($"{type.Name}_{method.Name}.Generated.cs", SourceText.From(source, Encoding.UTF8));
+                //source = $$"""
+                //// Iteration: {{Iteration}}
+                //// Elapsed: {{sw.Elapsed.TotalMilliseconds}}ms
+
+                //""" + source;
+                //Iteration++;
+
+                context.AddSource($"{model.TypeName}_{model.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
             });
     }
 
@@ -202,15 +218,5 @@ public class DependencyInjectionGenerator : IIncrementalGenerator
                 }
             }
         }
-    }
-
-    private static string IsStatic(ISymbol symbol)
-    {
-        return symbol.IsStatic ? "static" : "";
-    }
-
-    private static string GetAccessModifier(ISymbol symbol)
-    {
-        return symbol.DeclaredAccessibility.ToString().ToLowerInvariant();
     }
 }
