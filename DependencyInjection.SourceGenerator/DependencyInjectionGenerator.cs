@@ -1,9 +1,9 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 
 namespace DependencyInjection.SourceGenerator;
 
@@ -48,7 +48,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     var model = MethodModel.Create(method, attributeData);
 
                     //if (Previous != null && !model.Equals(Previous))
-                    //    Debugger.Launch();
+                    //    System.Diagnostics.Debugger.Launch();
 
                     //Previous = model;
 
@@ -56,19 +56,21 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 })
             .Where(method => method != null);
 
+        var combinedProvider = methodProvider.Combine(context.CompilationProvider)
+            .WithComparer(CombinedProviderComparer.Instance);
+
         // We require all matching type symbols, and create the generated files.
-        context.RegisterImplementationSourceOutput(methodProvider.Combine(context.CompilationProvider),
+        context.RegisterImplementationSourceOutput(combinedProvider,
             static (context, src) =>
             {
-                var model = src.Left;
-                var compilation = src.Right;
+                var (model, compilation) = src;
 
-                //var sw = Stopwatch.StartNew();
+                //var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 var sb = new StringBuilder();
                 var attributes = model.Attributes;
 
-                foreach (var attribute in attributes.Items)
+                foreach (var attribute in attributes)
                 {
                     var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? model.TypeMetadataName).ContainingAssembly;
 

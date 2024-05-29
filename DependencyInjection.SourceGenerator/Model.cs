@@ -1,7 +1,6 @@
-﻿using Microsoft.CodeAnalysis;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 
 namespace DependencyInjection.SourceGenerator;
 
@@ -31,7 +30,7 @@ record MethodModel(
             MethodStatic: IsStatic(method),
             IsExtensionMethod: method.IsExtensionMethod,
             ReturnsVoid: method.ReturnsVoid,
-            Attributes: new EquatableArray<AttributeModel> { Items = attributes.ToImmutableArray() });
+            Attributes: new EquatableArray<AttributeModel>(attributes.ToArray()));
     }
 
     private static string IsStatic(ISymbol symbol)
