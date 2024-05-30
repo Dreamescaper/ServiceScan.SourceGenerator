@@ -22,7 +22,7 @@ record MethodModel(
         return new MethodModel(
             Namespace: method.ContainingNamespace.ToDisplayString(),
             TypeName: method.ContainingType.Name,
-            TypeMetadataName: method.ContainingType.ToDisplayString(),
+            TypeMetadataName: method.ContainingType.ToFullMetadataName(),
             TypeAccessModifier: GetAccessModifier(method.ContainingType),
             TypeStatic: IsStatic(method.ContainingType),
             MethodName: method.Name,
@@ -54,8 +54,8 @@ record AttributeModel(
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
 
-        var assemblyOfTypeName = assemblyType?.ToDisplayString();
-        var assignableToTypeName = assignableTo?.ToDisplayString();
+        var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
+        var assignableToTypeName = assignableTo?.ToFullMetadataName();
         var lifetime = attribute.NamedArguments.FirstOrDefault(a => a.Key == "Lifetime").Value.Value as int? switch
         {
             0 => "Singleton",

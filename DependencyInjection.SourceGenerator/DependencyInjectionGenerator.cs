@@ -152,11 +152,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             return true;
         }
 
-        if (assignableTo.IsUnboundGenericType)
+        if (assignableTo.IsGenericType && assignableTo.IsDefinition)
         {
             if (assignableTo.TypeKind == TypeKind.Interface)
             {
-                var matchingInterface = type.Interfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.ConstructUnboundGenericType(), assignableTo));
+                var matchingInterface = type.Interfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, assignableTo));
                 matchedType = matchingInterface;
                 return matchingInterface != null;
             }
@@ -164,7 +164,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             var baseType = type.BaseType;
             while (baseType != null)
             {
-                if (baseType.IsGenericType && SymbolEqualityComparer.Default.Equals(baseType.ConstructUnboundGenericType(), assignableTo))
+                if (baseType.IsGenericType && SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, assignableTo))
                 {
                     matchedType = baseType;
                     return true;
