@@ -143,6 +143,67 @@ public class Tests
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void AddServicesWithTypeNameFilter()
+    {
+
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service"))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public class MyFirstService {}
+            public class MySecondService {}
+            public class ServiceWithNonMatchingName {}
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.MyFirstService, GeneratorTests.MyFirstService>()
+                .AddTransient<GeneratorTests.MySecondService, GeneratorTests.MySecondService>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void AddServicesWithTypeNameFilterAsImplementedInterfaces()
+    {
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", AsImplementedInterfaces = true))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IServiceA {}
+            public interface IServiceB {}
+            public interface IServiceC {}
+            public class MyFirstService: IServiceA {}
+            public class MySecondService: IServiceB, IServiceC {}
+            public class InterfacelessService {}
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.IServiceA, GeneratorTests.MyFirstService>()
+                .AddTransient<GeneratorTests.IServiceB, GeneratorTests.MySecondService>()
+                .AddTransient<GeneratorTests.IServiceC, GeneratorTests.MySecondService>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;

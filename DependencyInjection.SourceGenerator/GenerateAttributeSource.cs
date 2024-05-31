@@ -16,9 +16,13 @@ internal static class GenerateAttributeSource
         internal class GenerateServiceRegistrationsAttribute : Attribute
         {
             public Type? FromAssemblyOf { get; set; }
+
             public Type? AssignableTo { get; set; }
+
             public ServiceLifetime Lifetime { get; set; }
+
             public bool AsImplementedInterfaces { get; set; }
+    
             public string? TypeNameFilter { get; set; }
         }
         """;

@@ -47,12 +47,16 @@ record MethodModel(
 record AttributeModel(
     string? AssignableToTypeName,
     string? AssemblyOfTypeName,
-    string Lifetime)
+    string Lifetime,
+    string? TypeNameFilter,
+    bool AsImplementedInterfaces)
 {
     public static AttributeModel Create(AttributeData attribute)
     {
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
+        var typeNameFilter = attribute.NamedArguments.FirstOrDefault(a => a.Key == "TypeNameFilter").Value.Value as string;
+        var asImplementedInterfaces = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsImplementedInterfaces").Value.Value is true;
 
         var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
         var assignableToTypeName = assignableTo?.ToFullMetadataName();
@@ -63,6 +67,6 @@ record AttributeModel(
             _ => "Transient"
         };
 
-        return new(assignableToTypeName, assemblyOfTypeName, lifetime);
+        return new(assignableToTypeName, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces);
     }
 }

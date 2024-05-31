@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -81,6 +82,12 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     var types = GetTypesFromAssembly(assembly)
                         .Where(t => !t.IsAbstract && !t.IsStatic && t.TypeKind == TypeKind.Class);
 
+                    if (attribute.TypeNameFilter != null)
+                    {
+                        var regex = $"^{Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*")}$";
+                        types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
+                    }
+
                     bool anyFound = false;
 
                     foreach (var t in types)
@@ -93,19 +100,30 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
                         anyFound = true;
 
-                        var serviceType = matchedType ?? assignableToType ?? implementationType;
+                        IEnumerable<INamedTypeSymbol> serviceTypes = null;
 
-                        if (implementationType.IsGenericType)
+                        if (matchedType != null)
                         {
-                            implementationType = implementationType.ConstructUnboundGenericType();
-
-                            sb.AppendLine();
-                            sb.Append($"            .Add{attribute.Lifetime}(typeof({serviceType.ToDisplayString()}), typeof({implementationType.ToDisplayString()}))");
+                            serviceTypes = [matchedType];
                         }
                         else
                         {
-                            sb.AppendLine();
-                            sb.Append($"            .Add{attribute.Lifetime}<{serviceType.ToDisplayString()}, {implementationType.ToDisplayString()}>()");
+                            serviceTypes = attribute.AsImplementedInterfaces
+                                ? implementationType.Interfaces
+                                : [implementationType];
+                        }
+
+                        foreach (var serviceType in serviceTypes)
+                        {
+                            if (implementationType.IsGenericType)
+                            {
+                                implementationType = implementationType.ConstructUnboundGenericType();
+                                sb.AppendLine($"            .Add{attribute.Lifetime}(typeof({serviceType.ToDisplayString()}), typeof({implementationType.ToDisplayString()}))");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"            .Add{attribute.Lifetime}<{serviceType.ToDisplayString()}, {implementationType.ToDisplayString()}>()");
+                            }
                         }
                     }
 
@@ -128,7 +146,8 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 {
                     {{model.MethodAccessModifier}} {{model.MethodStatic}} partial {{returnType}} {{model.MethodName}}({{(model.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
                     {
-                        {{(model.ReturnsVoid ? "" : "return ")}}services{{sb}};
+                        {{(model.ReturnsVoid ? "" : "return ")}}services
+                            {{sb.ToString().Trim()}};
                     }
                 }
                 """;
