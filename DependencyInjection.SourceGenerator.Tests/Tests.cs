@@ -60,6 +60,64 @@ public class Tests
     }
 
     [Fact]
+    public void AddServiceWithNonDirectInterface()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public abstract class AbstractService : IService { }
+            public class MyService1 : AbstractService { }
+            public class MyService2 : AbstractService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.IService, GeneratorTests.MyService1>()
+                .AddTransient<GeneratorTests.IService, GeneratorTests.MyService2>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void AddServiceWithNonDirectAbstractClass()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(BaseType))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public abstract class BaseType { }
+            public abstract class AbstractService : BaseType { }
+            public class MyService1 : AbstractService { }
+            public class MyService2 : AbstractService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.BaseType, GeneratorTests.MyService1>()
+                .AddTransient<GeneratorTests.BaseType, GeneratorTests.MyService2>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddServicesAssignableToOpenGenericInterface()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<>))]";

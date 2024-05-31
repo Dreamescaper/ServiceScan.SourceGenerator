@@ -109,7 +109,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         else
                         {
                             serviceTypes = attribute.AsImplementedInterfaces
-                                ? implementationType.Interfaces
+                                ? implementationType.AllInterfaces
                                 : [implementationType];
                         }
 
@@ -175,7 +175,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         {
             if (assignableTo.TypeKind == TypeKind.Interface)
             {
-                var matchingInterface = type.Interfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, assignableTo));
+                var matchingInterface = type.AllInterfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, assignableTo));
                 matchedType = matchingInterface;
                 return matchingInterface != null;
             }
@@ -197,7 +197,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             if (assignableTo.TypeKind == TypeKind.Interface)
             {
                 matchedType = assignableTo;
-                return type.Interfaces.Contains(assignableTo, SymbolEqualityComparer.Default);
+                return type.AllInterfaces.Contains(assignableTo, SymbolEqualityComparer.Default);
             }
 
             var baseType = type.BaseType;
