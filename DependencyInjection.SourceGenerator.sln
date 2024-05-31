@@ -7,11 +7,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection.SourceG
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection.SourceGenerator", "DependencyInjection.SourceGenerator\DependencyInjection.SourceGenerator.csproj", "{5C56A256-7DF0-4E8B-9280-6AB76247E039}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjection.SourceGenerator.Playground", "DependencyInjection.SourceGenerator.Playground\DependencyInjection.SourceGenerator.Playground.csproj", "{3FF68E92-214B-42F3-B5D1-BD3B35D1199F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection.SourceGenerator.Playground", "DependencyInjection.SourceGenerator.Playground\DependencyInjection.SourceGenerator.Playground.csproj", "{3FF68E92-214B-42F3-B5D1-BD3B35D1199F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B4814492-C04A-4DDF-8C13-0F2A009ADBBF}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		README.md = README.md
 	EndProjectSection
 EndProject
 Global

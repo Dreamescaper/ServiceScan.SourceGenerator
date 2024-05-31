@@ -5,23 +5,13 @@ using System.Collections.Immutable;
 
 namespace DependencyInjection.SourceGenerator;
 
-internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnumerable<T> where T : IEquatable<T>
+/// <summary>
+/// Creates a new <see cref="EquatableArray{T}"/> instance.
+/// </summary>
+/// <param name="array">The input <see cref="ImmutableArray"/> to wrap.</param>
+internal readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArray<T>>, IEnumerable<T> where T : IEquatable<T>
 {
-    public static readonly EquatableArray<T> Empty = new(Array.Empty<T>());
-
-    /// <summary>
-    /// The underlying <typeparamref name="T"/> array.
-    /// </summary>
-    private readonly T[]? _array;
-
-    /// <summary>
-    /// Creates a new <see cref="EquatableArray{T}"/> instance.
-    /// </summary>
-    /// <param name="array">The input <see cref="ImmutableArray"/> to wrap.</param>
-    public EquatableArray(T[] array)
-    {
-        _array = array;
-    }
+    public static readonly EquatableArray<T> Empty = new([]);
 
     /// <sinheritdoc/>
     public bool Equals(EquatableArray<T> array)
@@ -40,8 +30,8 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
     {
         int hashCode = 0;
 
-        for (int i = 0; i < _array.Length; i++)
-            hashCode ^= _array[i].GetHashCode();
+        for (int i = 0; i < array.Length; i++)
+            hashCode ^= array[i].GetHashCode();
 
         return hashCode;
     }
@@ -52,27 +42,22 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
     /// <returns>A <see cref="ReadOnlySpan{T}"/> wrapping the current items.</returns>
     public ReadOnlySpan<T> AsSpan()
     {
-        return _array.AsSpan();
+        return array.AsSpan();
     }
-
-    /// <summary>
-    /// Gets the underlying array if there is one
-    /// </summary>
-    public T[]? GetArray() => _array;
 
     /// <sinheritdoc/>
     IEnumerator<T> IEnumerable<T>.GetEnumerator()
     {
-        return ((IEnumerable<T>)(_array ?? Array.Empty<T>())).GetEnumerator();
+        return ((IEnumerable<T>)(array ?? [])).GetEnumerator();
     }
 
     /// <sinheritdoc/>
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return ((IEnumerable<T>)(_array ?? Array.Empty<T>())).GetEnumerator();
+        return ((IEnumerable<T>)(array ?? [])).GetEnumerator();
     }
 
-    public int Count => _array?.Length ?? 0;
+    public int Count => array?.Length ?? 0;
 
     /// <summary>
     /// Checks whether two <see cref="EquatableArray{T}"/> values are the same.
