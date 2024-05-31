@@ -15,7 +15,7 @@ public class Tests
     [InlineData(ServiceLifetime.Singleton)]
     public void AddServicesWithLifetime(ServiceLifetime lifetime)
     {
-        var attribute = $"[Generate(AssignableTo = typeof(IService), Lifetime = ServiceLifetime.{lifetime})]";
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService), Lifetime = ServiceLifetime.{lifetime})]";
 
         var compilation = CreateCompilation(
             Sources.MethodWithAttribute(attribute),
@@ -43,7 +43,7 @@ public class Tests
     [Fact]
     public void AddServicesFromAnotherAssembly()
     {
-        var attribute = "[Generate(FromAssemblyOf = typeof(External.IExternalService), AssignableTo = typeof(External.IExternalService))]";
+        var attribute = "[GenerateServiceRegistrations(FromAssemblyOf = typeof(External.IExternalService), AssignableTo = typeof(External.IExternalService))]";
         var compilation = CreateCompilation(Sources.MethodWithAttribute(attribute));
 
         var results = CSharpGeneratorDriver
@@ -62,7 +62,7 @@ public class Tests
     [Fact]
     public void AddServicesAssignableToOpenGenericInterface()
     {
-        var attribute = $"[Generate(AssignableTo = typeof(IService<>))]";
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<>))]";
 
         var compilation = CreateCompilation(
             Sources.MethodWithAttribute(attribute),

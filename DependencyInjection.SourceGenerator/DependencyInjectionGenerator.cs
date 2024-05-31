@@ -20,9 +20,9 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterPostInitializationOutput(context => context.AddSource("GenerateAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
+        context.RegisterPostInitializationOutput(context => context.AddSource("GenerateServiceRegistrationsAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
 
-        var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName("DependencyInjection.SourceGenerator.GenerateAttribute",
+        var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName("DependencyInjection.SourceGenerator.GenerateServiceRegistrationsAttribute",
                 predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax,
                 transform: static (context, ct) =>
                 {
@@ -33,7 +33,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         return null;
 
                     var serviceCollectionType = context.SemanticModel.Compilation.GetTypeByMetadataName("Microsoft.Extensions.DependencyInjection.IServiceCollection");
-                    var attributeType = context.SemanticModel.Compilation.GetTypeByMetadataName("DependencyInjection.SourceGenerator.GenerateAttribute");
+                    var attributeType = context.SemanticModel.Compilation.GetTypeByMetadataName("DependencyInjection.SourceGenerator.GenerateServiceRegistrationsAttribute");
 
                     if (serviceCollectionType is null)
                         return null;

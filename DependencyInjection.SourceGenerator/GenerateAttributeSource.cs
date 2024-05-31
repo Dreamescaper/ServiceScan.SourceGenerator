@@ -13,7 +13,7 @@ internal static class GenerateAttributeSource
 
         [Conditional("CODE_ANALYSIS")]
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-        internal class GenerateAttribute : Attribute
+        internal class GenerateServiceRegistrationsAttribute : Attribute
         {
             public Type? FromAssemblyOf { get; set; }
             public Type? AssignableTo { get; set; }
