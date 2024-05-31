@@ -87,6 +87,62 @@ public class Tests
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void AddServicesAssignableToAbstractClass()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(AbstractService))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public abstract class AbstractService { }
+            public class MyService1 : AbstractService { }
+            public class MyService2 : AbstractService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.AbstractService, GeneratorTests.MyService1>()
+                .AddTransient<GeneratorTests.AbstractService, GeneratorTests.MyService2>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void AddServicesAssignableToOpenGenericAbstractClass()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(AbstractService<>))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public abstract class AbstractService<T> { }
+            public class MyIntService : AbstractService<int> { }
+            public class MyStringService : AbstractService<string> { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.AbstractService<int>, GeneratorTests.MyIntService>()
+                .AddTransient<GeneratorTests.AbstractService<string>, GeneratorTests.MyStringService>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
