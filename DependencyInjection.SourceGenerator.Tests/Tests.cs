@@ -202,6 +202,62 @@ public class Tests
     }
 
     [Fact]
+    public void AddGenericServicesImplementingGenericInterfaceAsOpenGenerics()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IGenericService<>))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IGenericService<T> { }
+            public class MyService1<T> : IGenericService<T> { }
+            public class MyService2<T> : IGenericService<T> { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient(typeof(GeneratorTests.IGenericService<>), typeof(GeneratorTests.MyService1<>))
+                .AddTransient(typeof(GeneratorTests.IGenericService<>), typeof(GeneratorTests.MyService2<>));
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void AddGenericServicesImplementingNonGenericInterfaceAsOpenGenerics()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1<T> : IService { }
+            public class MyService2<T> : IService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient(typeof(GeneratorTests.IService), typeof(GeneratorTests.MyService1<>))
+                .AddTransient(typeof(GeneratorTests.IService), typeof(GeneratorTests.MyService2<>));
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddServicesWithTypeNameFilter()
     {
 

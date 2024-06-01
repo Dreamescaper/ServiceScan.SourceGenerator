@@ -117,8 +117,12 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         {
                             if (implementationType.IsGenericType)
                             {
-                                implementationType = implementationType.ConstructUnboundGenericType();
-                                sb.AppendLine($"            .Add{attribute.Lifetime}(typeof({serviceType.ToDisplayString()}), typeof({implementationType.ToDisplayString()}))");
+                                var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                                var serviceTypeName = serviceType.IsGenericType
+                                    ? serviceType.ConstructUnboundGenericType().ToDisplayString()
+                                    : serviceType.ToDisplayString();
+
+                                sb.AppendLine($"            .Add{attribute.Lifetime}(typeof({serviceTypeName}), typeof({implementationTypeName}))");
                             }
                             else
                             {
