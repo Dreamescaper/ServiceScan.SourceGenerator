@@ -1,8 +1,17 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Microsoft.CodeAnalysis;
 
 namespace DependencyInjection.SourceGenerator;
+
+record MethodImplementationModel(MethodModel Method, EquatableArray<ServiceRegistrationModel> Registrations);
+
+record ServiceRegistrationModel(
+    string Lifetime,
+    string ServiceTypeName,
+    string ImplementationTypeName,
+    bool IsOpenGeneric);
+
+record MethodWithAttributesModel(MethodModel Method, EquatableArray<AttributeModel> Attributes);
 
 record MethodModel(
     string Namespace,
@@ -14,10 +23,9 @@ record MethodModel(
     string MethodAccessModifier,
     string MethodStatic,
     bool IsExtensionMethod,
-    bool ReturnsVoid,
-    EquatableArray<AttributeModel> Attributes)
+    bool ReturnsVoid)
 {
-    public static MethodModel Create(IMethodSymbol method, IEnumerable<AttributeModel> attributes)
+    public static MethodModel Create(IMethodSymbol method)
     {
         return new MethodModel(
             Namespace: method.ContainingNamespace.ToDisplayString(),
@@ -29,8 +37,7 @@ record MethodModel(
             MethodAccessModifier: GetAccessModifier(method),
             MethodStatic: IsStatic(method),
             IsExtensionMethod: method.IsExtensionMethod,
-            ReturnsVoid: method.ReturnsVoid,
-            Attributes: new EquatableArray<AttributeModel>(attributes.ToArray()));
+            ReturnsVoid: method.ReturnsVoid);
     }
 
     private static string IsStatic(ISymbol symbol)

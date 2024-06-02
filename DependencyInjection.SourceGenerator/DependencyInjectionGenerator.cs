@@ -46,111 +46,122 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         return null;
 
                     var attributeData = context.Attributes.Select(AttributeModel.Create);
-                    var model = MethodModel.Create(method, attributeData);
+                    var model = MethodModel.Create(method);
+                    return new MethodWithAttributesModel(model, new EquatableArray<AttributeModel>(attributeData.ToArray()));
 
                     //if (Previous != null && !model.Equals(Previous))
                     //    System.Diagnostics.Debugger.Launch();
 
                     //Previous = model;
-
-                    return model;
                 })
             .Where(method => method != null);
 
         var combinedProvider = methodProvider.Combine(context.CompilationProvider)
             .WithComparer(CombinedProviderComparer.Instance);
 
+        var methodImplementationsProvider = combinedProvider.Select(static (context, ct) =>
+        {
+            var ((method, attributes), compilation) = context;
+
+            var registrations = new List<ServiceRegistrationModel>();
+
+            foreach (var attribute in attributes)
+            {
+                var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? method.TypeMetadataName).ContainingAssembly;
+
+                var assignableToType = attribute.AssignableToTypeName is null
+                    ? null
+                    : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
+
+                var types = GetTypesFromAssembly(assembly)
+                    .Where(t => !t.IsAbstract && !t.IsStatic && t.TypeKind == TypeKind.Class);
+
+                if (attribute.TypeNameFilter != null)
+                {
+                    var regex = $"^{Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*")}$";
+                    types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
+                }
+
+                foreach (var t in types)
+                {
+                    var implementationType = t;
+
+                    INamedTypeSymbol matchedType = null;
+                    if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
+                        continue;
+
+                    IEnumerable<INamedTypeSymbol> serviceTypes = null;
+
+                    if (matchedType != null)
+                    {
+                        serviceTypes = [matchedType];
+                    }
+                    else
+                    {
+                        serviceTypes = attribute.AsImplementedInterfaces
+                            ? implementationType.AllInterfaces
+                            : [implementationType];
+                    }
+
+                    foreach (var serviceType in serviceTypes)
+                    {
+                        if (implementationType.IsGenericType)
+                        {
+                            var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                            var serviceTypeName = serviceType.IsGenericType
+                                ? serviceType.ConstructUnboundGenericType().ToDisplayString()
+                                : serviceType.ToDisplayString();
+
+                            var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, true);
+                            registrations.Add(registration);
+                        }
+                        else
+                        {
+
+                            var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), false);
+                            registrations.Add(registration);
+                        }
+                    }
+                }
+            }
+
+            return new MethodImplementationModel(method, new EquatableArray<ServiceRegistrationModel>([.. registrations]));
+        });
+
         // We require all matching type symbols, and create the generated files.
-        context.RegisterImplementationSourceOutput(combinedProvider,
+        context.RegisterImplementationSourceOutput(methodImplementationsProvider,
             static (context, src) =>
             {
-                var (model, compilation) = src;
+                var (method, registrations) = src;
 
                 //var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 var sb = new StringBuilder();
-                var attributes = model.Attributes;
 
-                foreach (var attribute in attributes)
+                foreach (var registration in registrations)
                 {
-                    var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? model.TypeMetadataName).ContainingAssembly;
-
-                    var assignableToType = attribute.AssignableToTypeName is null
-                        ? null
-                        : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
-
-                    var types = GetTypesFromAssembly(assembly)
-                        .Where(t => !t.IsAbstract && !t.IsStatic && t.TypeKind == TypeKind.Class);
-
-                    if (attribute.TypeNameFilter != null)
+                    if (registration.IsOpenGeneric)
                     {
-                        var regex = $"^{Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*")}$";
-                        types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
+                        sb.AppendLine($"            .Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))");
                     }
-
-                    bool anyFound = false;
-
-                    foreach (var t in types)
+                    else
                     {
-                        var implementationType = t;
-
-                        INamedTypeSymbol matchedType = null;
-                        if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
-                            continue;
-
-                        anyFound = true;
-
-                        IEnumerable<INamedTypeSymbol> serviceTypes = null;
-
-                        if (matchedType != null)
-                        {
-                            serviceTypes = [matchedType];
-                        }
-                        else
-                        {
-                            serviceTypes = attribute.AsImplementedInterfaces
-                                ? implementationType.AllInterfaces
-                                : [implementationType];
-                        }
-
-                        foreach (var serviceType in serviceTypes)
-                        {
-                            if (implementationType.IsGenericType)
-                            {
-                                var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
-                                var serviceTypeName = serviceType.IsGenericType
-                                    ? serviceType.ConstructUnboundGenericType().ToDisplayString()
-                                    : serviceType.ToDisplayString();
-
-                                sb.AppendLine($"            .Add{attribute.Lifetime}(typeof({serviceTypeName}), typeof({implementationTypeName}))");
-                            }
-                            else
-                            {
-                                sb.AppendLine($"            .Add{attribute.Lifetime}<{serviceType.ToDisplayString()}, {implementationType.ToDisplayString()}>()");
-                            }
-                        }
-                    }
-
-                    if (!anyFound)
-                    {
-                        //context.ReportDiagnostic(Diagnostic.Create(NoMatchingTypesFound, method.Locations[0]));
-                        return;
+                        sb.AppendLine($"            .Add{registration.Lifetime}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>()");
                     }
                 }
 
-                var returnType = model.ReturnsVoid ? "void" : "IServiceCollection";
-
+                var returnType = method.ReturnsVoid ? "void" : "IServiceCollection";
 
                 var source = $$"""
                 using Microsoft.Extensions.DependencyInjection;
 
-                namespace {{model.Namespace}};
+                namespace {{method.Namespace}};
 
-                {{model.TypeAccessModifier}} {{model.TypeStatic}} partial class {{model.TypeName}}
+                {{method.TypeAccessModifier}} {{method.TypeStatic}} partial class {{method.TypeName}}
                 {
-                    {{model.MethodAccessModifier}} {{model.MethodStatic}} partial {{returnType}} {{model.MethodName}}({{(model.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
+                    {{method.MethodAccessModifier}} {{method.MethodStatic}} partial {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
                     {
-                        {{(model.ReturnsVoid ? "" : "return ")}}services
+                        {{(method.ReturnsVoid ? "" : "return ")}}services
                             {{sb.ToString().Trim()}};
                     }
                 }
@@ -163,7 +174,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 //""" + source;
                 //Iteration++;
 
-                context.AddSource($"{model.TypeName}_{model.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
+                context.AddSource($"{method.TypeName}_{method.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
             });
     }
 
