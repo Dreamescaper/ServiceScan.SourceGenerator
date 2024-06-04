@@ -74,7 +74,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
 
                 var types = GetTypesFromAssembly(assembly)
-                    .Where(t => !t.IsAbstract && !t.IsStatic && t.TypeKind == TypeKind.Class);
+                    .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
 
                 if (attribute.TypeNameFilter != null)
                 {
