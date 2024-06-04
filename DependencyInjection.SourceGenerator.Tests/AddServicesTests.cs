@@ -5,7 +5,7 @@ using Xunit;
 
 namespace DependencyInjection.SourceGenerator.Tests;
 
-public class Tests
+public class AddServicesTests
 {
     private readonly DependencyInjectionGenerator _generator = new();
 
