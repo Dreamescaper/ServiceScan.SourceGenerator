@@ -1,9 +1,46 @@
 ﻿using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace DependencyInjection.SourceGenerator;
 
-record MethodImplementationModel(MethodModel Method, EquatableArray<ServiceRegistrationModel> Registrations);
+record DiagnosticModel<T>
+{
+    public T? Model { get; init; }
+    public DiagnosticInfo? Diagnostic { get; init; }
+
+    public static implicit operator DiagnosticModel<T>(T model) => new() { Model = model };
+
+    public static implicit operator DiagnosticModel<T>(DiagnosticInfo diagnostic) => new() { Diagnostic = diagnostic };
+}
+
+record DiagnosticInfo(DiagnosticDescriptor Descriptor, string FilePath, TextSpan TextSpan, LinePositionSpan LineSpan)
+{
+    public Diagnostic CreateDiagnostic()
+    {
+        var location = Location.Create(FilePath, TextSpan, LineSpan);
+        return Diagnostic.Create(Descriptor, location);
+    }
+
+    public static DiagnosticInfo Create(DiagnosticDescriptor descriptor, Location location)
+    {
+        return new DiagnosticInfo(descriptor, location.SourceTree?.FilePath ?? "", location.SourceSpan, location.GetLineSpan().Span);
+    }
+
+    public static DiagnosticInfo Create(DiagnosticDescriptor descriptor, ISymbol symbol)
+    {
+        return Create(descriptor, symbol.Locations[0]);
+    }
+
+    public static DiagnosticInfo Create(DiagnosticDescriptor descriptor, AttributeModel attribute)
+    {
+        return new DiagnosticInfo(descriptor, attribute.FilePath ?? "", attribute.Span, attribute.LineSpan);
+    }
+};
+
+record MethodImplementationModel(
+    MethodModel Method,
+    EquatableArray<ServiceRegistrationModel> Registrations);
 
 record ServiceRegistrationModel(
     string Lifetime,
@@ -56,7 +93,10 @@ record AttributeModel(
     string? AssemblyOfTypeName,
     string Lifetime,
     string? TypeNameFilter,
-    bool AsImplementedInterfaces)
+    bool AsImplementedInterfaces,
+    string FilePath,
+    TextSpan Span,
+    LinePositionSpan LineSpan)
 {
     public static AttributeModel Create(AttributeData attribute)
     {
@@ -74,6 +114,8 @@ record AttributeModel(
             _ => "Transient"
         };
 
-        return new(assignableToTypeName, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces);
+        var syntax = attribute.ApplicationSyntaxReference.SyntaxTree;
+        var textSpan = attribute.ApplicationSyntaxReference.Span;
+        return new(assignableToTypeName, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, syntax.FilePath, textSpan, syntax.GetLineSpan(textSpan).Span);
     }
 }

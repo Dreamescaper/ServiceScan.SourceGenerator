@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using static DependencyInjection.SourceGenerator.DiagnosticDescriptors;
 
 namespace DependencyInjection.SourceGenerator;
 
@@ -14,16 +15,12 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     //static MethodModel Previous;
     //static int Iteration = 0;
 
-    private static readonly DiagnosticDescriptor NotPartialDefinition = new("DI001", "Error shouldn't happen", "Test", "DI", DiagnosticSeverity.Error, true);
-    private static readonly DiagnosticDescriptor WrongReturnType = new("DI002", "Error shouldn't happen", "Test", "DI", DiagnosticSeverity.Error, true);
-    private static readonly DiagnosticDescriptor WrongMethodParameters = new("DI003", "Error shouldn't happen", "Test", "DI", DiagnosticSeverity.Error, true);
-    private static readonly DiagnosticDescriptor NoMatchingTypesFound = new("DI004", "Error shouldn't happen", "Test", "DI", DiagnosticSeverity.Error, true);
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(context => context.AddSource("GenerateServiceRegistrationsAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
 
-        var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName("DependencyInjection.SourceGenerator.GenerateServiceRegistrationsAttribute",
+        var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName<DiagnosticModel<MethodWithAttributesModel>>(
+                "DependencyInjection.SourceGenerator.GenerateServiceRegistrationsAttribute",
                 predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax,
                 transform: static (context, ct) =>
                 {
@@ -31,22 +28,22 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         return null;
 
                     if (!method.IsPartialDefinition)
-                        return null;
+                        return DiagnosticInfo.Create(NotPartialDefinition, method);
 
                     var serviceCollectionType = context.SemanticModel.Compilation.GetTypeByMetadataName("Microsoft.Extensions.DependencyInjection.IServiceCollection");
-                    var attributeType = context.SemanticModel.Compilation.GetTypeByMetadataName("DependencyInjection.SourceGenerator.GenerateServiceRegistrationsAttribute");
 
                     if (serviceCollectionType is null)
                         return null;
 
                     if (!method.ReturnsVoid && !SymbolEqualityComparer.Default.Equals(method.ReturnType, serviceCollectionType))
-                        return null;
+                        return DiagnosticInfo.Create(WrongReturnType, method);
 
                     if (method.Parameters.Length != 1 || !SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, serviceCollectionType))
-                        return null;
+                        return DiagnosticInfo.Create(WrongMethodParameters, method);
 
                     var attributeData = context.Attributes.Select(AttributeModel.Create);
                     var model = MethodModel.Create(method);
+
                     return new MethodWithAttributesModel(model, new EquatableArray<AttributeModel>(attributeData.ToArray()));
 
                     //if (Previous != null && !model.Equals(Previous))
@@ -59,80 +56,99 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         var combinedProvider = methodProvider.Combine(context.CompilationProvider)
             .WithComparer(CombinedProviderComparer.Instance);
 
-        var methodImplementationsProvider = combinedProvider.Select(static (context, ct) =>
-        {
-            var ((method, attributes), compilation) = context;
-
-            var registrations = new List<ServiceRegistrationModel>();
-
-            foreach (var attribute in attributes)
+        var methodImplementationsProvider = combinedProvider
+            .Select<(DiagnosticModel<MethodWithAttributesModel>, Compilation), DiagnosticModel<MethodImplementationModel>>(static (context, ct) =>
             {
-                var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? method.TypeMetadataName).ContainingAssembly;
+                var (diagnosticModel, compilation) = context;
 
-                var assignableToType = attribute.AssignableToTypeName is null
-                    ? null
-                    : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
+                if (diagnosticModel.Diagnostic != null)
+                    return diagnosticModel.Diagnostic;
 
-                var types = GetTypesFromAssembly(assembly)
-                    .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
+                var (method, attributes) = diagnosticModel.Model;
 
-                if (attribute.TypeNameFilter != null)
+                var registrations = new List<ServiceRegistrationModel>();
+
+                foreach (var attribute in attributes)
                 {
-                    var regex = $"^{Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*")}$";
-                    types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
-                }
+                    bool anyTypes = false;
 
-                foreach (var t in types)
-                {
-                    var implementationType = t;
+                    var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? method.TypeMetadataName).ContainingAssembly;
 
-                    INamedTypeSymbol matchedType = null;
-                    if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
-                        continue;
+                    var assignableToType = attribute.AssignableToTypeName is null
+                        ? null
+                        : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
 
-                    IEnumerable<INamedTypeSymbol> serviceTypes = null;
+                    var types = GetTypesFromAssembly(assembly)
+                        .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
 
-                    if (matchedType != null)
+                    if (attribute.TypeNameFilter != null)
                     {
-                        serviceTypes = [matchedType];
-                    }
-                    else
-                    {
-                        serviceTypes = attribute.AsImplementedInterfaces
-                            ? implementationType.AllInterfaces
-                            : [implementationType];
+                        var regex = $"^{Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*")}$";
+                        types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
                     }
 
-                    foreach (var serviceType in serviceTypes)
+                    foreach (var t in types)
                     {
-                        if (implementationType.IsGenericType)
+                        var implementationType = t;
+
+                        INamedTypeSymbol matchedType = null;
+                        if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
+                            continue;
+
+                        IEnumerable<INamedTypeSymbol> serviceTypes = null;
+
+                        if (matchedType != null)
                         {
-                            var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
-                            var serviceTypeName = serviceType.IsGenericType
-                                ? serviceType.ConstructUnboundGenericType().ToDisplayString()
-                                : serviceType.ToDisplayString();
-
-                            var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, true);
-                            registrations.Add(registration);
+                            serviceTypes = [matchedType];
                         }
                         else
                         {
+                            serviceTypes = attribute.AsImplementedInterfaces
+                                ? implementationType.AllInterfaces
+                                : [implementationType];
+                        }
 
-                            var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), false);
-                            registrations.Add(registration);
+                        foreach (var serviceType in serviceTypes)
+                        {
+                            if (implementationType.IsGenericType)
+                            {
+                                var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                                var serviceTypeName = serviceType.IsGenericType
+                                    ? serviceType.ConstructUnboundGenericType().ToDisplayString()
+                                    : serviceType.ToDisplayString();
+
+                                var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, true);
+                                registrations.Add(registration);
+                            }
+                            else
+                            {
+
+                                var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), false);
+                                registrations.Add(registration);
+                            }
+
+                            anyTypes = true;
                         }
                     }
+
+                    if (!anyTypes)
+                        return DiagnosticInfo.Create(NoMatchingTypesFound, attribute);
                 }
-            }
 
-            return new MethodImplementationModel(method, new EquatableArray<ServiceRegistrationModel>([.. registrations]));
-        });
+                return new MethodImplementationModel(method, new EquatableArray<ServiceRegistrationModel>([.. registrations]));
+            });
 
-        // We require all matching type symbols, and create the generated files.
         context.RegisterImplementationSourceOutput(methodImplementationsProvider,
             static (context, src) =>
             {
-                var (method, registrations) = src;
+                if (src.Diagnostic != null)
+                {
+                    System.Diagnostics.Debugger.Launch();
+                    context.ReportDiagnostic(src.Diagnostic.CreateDiagnostic());
+                    return;
+                }
+
+                var (method, registrations) = src.Model;
 
                 //var sw = System.Diagnostics.Stopwatch.StartNew();
 
