@@ -82,7 +82,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
                     if (attribute.TypeNameFilter != null)
                     {
-                        var regex = $"^{Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*")}$";
+                        var regex = $"^({Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
                         types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
                     }
 

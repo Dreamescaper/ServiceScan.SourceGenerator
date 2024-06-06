@@ -287,6 +287,35 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddServicesWithTypeNameFilter_MultipleGroups()
+    {
+
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*First*,*Second*"))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public class MyFirstService {}
+            public class MySecondService {}
+            public class ServiceWithNonMatchingName {}
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.MyFirstService, GeneratorTests.MyFirstService>()
+                .AddTransient<GeneratorTests.MySecondService, GeneratorTests.MySecondService>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddServicesWithTypeNameFilterAsImplementedInterfaces()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", AsImplementedInterfaces = true))]""";
