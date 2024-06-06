@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace DependencyInjection.SourceGenerator;
 
@@ -17,37 +18,40 @@ record MethodModel(
     string Namespace,
     string TypeName,
     string TypeMetadataName,
-    string TypeAccessModifier,
-    string TypeStatic,
+    string TypeModifiers,
     string MethodName,
-    string MethodAccessModifier,
-    string MethodStatic,
+    string MethodModifiers,
     bool IsExtensionMethod,
     bool ReturnsVoid)
 {
-    public static MethodModel Create(IMethodSymbol method)
+    public static MethodModel Create(IMethodSymbol method, SyntaxNode syntax)
     {
         return new MethodModel(
             Namespace: method.ContainingNamespace.ToDisplayString(),
             TypeName: method.ContainingType.Name,
             TypeMetadataName: method.ContainingType.ToFullMetadataName(),
-            TypeAccessModifier: GetAccessModifier(method.ContainingType),
-            TypeStatic: IsStatic(method.ContainingType),
+            TypeModifiers: GetModifiers(GetTypeSyntax(syntax)),
             MethodName: method.Name,
-            MethodAccessModifier: GetAccessModifier(method),
-            MethodStatic: IsStatic(method),
+            MethodModifiers: GetModifiers(syntax),
             IsExtensionMethod: method.IsExtensionMethod,
             ReturnsVoid: method.ReturnsVoid);
     }
 
-    private static string IsStatic(ISymbol symbol)
+    private static TypeDeclarationSyntax GetTypeSyntax(SyntaxNode node)
     {
-        return symbol.IsStatic ? "static" : "";
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is TypeDeclarationSyntax t)
+                return t;
+            parent = parent.Parent;
+        }
+        return null;
     }
 
-    private static string GetAccessModifier(ISymbol symbol)
+    private static string GetModifiers(SyntaxNode syntax)
     {
-        return symbol.DeclaredAccessibility.ToString().ToLowerInvariant();
+        return (syntax as MemberDeclarationSyntax)?.Modifiers.ToString() ?? "";
     }
 }
 

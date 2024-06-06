@@ -46,7 +46,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         return null;
 
                     var attributeData = context.Attributes.Select(AttributeModel.Create);
-                    var model = MethodModel.Create(method);
+                    var model = MethodModel.Create(method, context.TargetNode);
                     return new MethodWithAttributesModel(model, new EquatableArray<AttributeModel>(attributeData.ToArray()));
 
                     //if (Previous != null && !model.Equals(Previous))
@@ -157,9 +157,9 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
                 namespace {{method.Namespace}};
 
-                {{method.TypeAccessModifier}} {{method.TypeStatic}} partial class {{method.TypeName}}
+                {{method.TypeModifiers}} class {{method.TypeName}}
                 {
-                    {{method.MethodAccessModifier}} {{method.MethodStatic}} partial {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
+                    {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
                     {
                         {{(method.ReturnsVoid ? "" : "return ")}}services
                             {{sb.ToString().Trim()}};
