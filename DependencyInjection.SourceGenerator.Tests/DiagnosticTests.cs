@@ -160,4 +160,29 @@ public class DiagnosticTests
 
         Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NoMatchingTypesFound);
     }
+
+    [Fact]
+    public void SearchCriteriaInTheAttributeIsMissing()
+    {
+        var compilation = CreateCompilation(Services,
+            """
+            using DependencyInjection.SourceGenerator;
+            using Microsoft.Extensions.DependencyInjection;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations]
+                public static partial IServiceCollection AddServices(this IServiceCollection services);
+            }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingSearchCriteria);
+    }
 }

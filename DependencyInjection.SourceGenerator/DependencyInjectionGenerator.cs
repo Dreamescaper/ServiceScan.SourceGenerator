@@ -12,9 +12,6 @@ namespace DependencyInjection.SourceGenerator;
 [Generator]
 public partial class DependencyInjectionGenerator : IIncrementalGenerator
 {
-    //static MethodModel Previous;
-    //static int Iteration = 0;
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(context => context.AddSource("GenerateServiceRegistrationsAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
@@ -28,7 +25,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         return null;
 
                     if (!method.IsPartialDefinition)
-                        return DiagnosticInfo.Create(NotPartialDefinition, method);
+                        return Diagnostic.Create(NotPartialDefinition, method.Locations[0]);
 
                     var serviceCollectionType = context.SemanticModel.Compilation.GetTypeByMetadataName("Microsoft.Extensions.DependencyInjection.IServiceCollection");
 
@@ -36,20 +33,22 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         return null;
 
                     if (!method.ReturnsVoid && !SymbolEqualityComparer.Default.Equals(method.ReturnType, serviceCollectionType))
-                        return DiagnosticInfo.Create(WrongReturnType, method);
+                        return Diagnostic.Create(WrongReturnType, method.Locations[0]);
 
                     if (method.Parameters.Length != 1 || !SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, serviceCollectionType))
-                        return DiagnosticInfo.Create(WrongMethodParameters, method);
+                        return Diagnostic.Create(WrongMethodParameters, method.Locations[0]);
 
-                    var attributeData = context.Attributes.Select(AttributeModel.Create);
-                    var model = MethodModel.Create(method);
+                    var attributeData = new AttributeModel[context.Attributes.Length];
+                    for (var i = 0; i < context.Attributes.Length; i++)
+                    {
+                        attributeData[i] = AttributeModel.Create(context.Attributes[i]);
 
-                    return new MethodWithAttributesModel(model, new EquatableArray<AttributeModel>(attributeData.ToArray()));
+                        if (!attributeData[i].HasSearchCriteria)
+                            return Diagnostic.Create(MissingSearchCriteria, attributeData[i].Location);
+                    }
 
-                    //if (Previous != null && !model.Equals(Previous))
-                    //    System.Diagnostics.Debugger.Launch();
-
-                    //Previous = model;
+                    var model = MethodModel.Create(method, context.TargetNode);
+                    return new MethodWithAttributesModel(model, new EquatableArray<AttributeModel>(attributeData));
                 })
             .Where(method => method != null);
 
@@ -132,7 +131,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     }
 
                     if (!anyTypes)
-                        return DiagnosticInfo.Create(NoMatchingTypesFound, attribute);
+                        return Diagnostic.Create(NoMatchingTypesFound, attribute.Location);
                 }
 
                 return new MethodImplementationModel(method, new EquatableArray<ServiceRegistrationModel>([.. registrations]));
@@ -143,14 +142,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             {
                 if (src.Diagnostic != null)
                 {
-                    System.Diagnostics.Debugger.Launch();
-                    context.ReportDiagnostic(src.Diagnostic.CreateDiagnostic());
+                    context.ReportDiagnostic(src.Diagnostic);
                     return;
                 }
 
                 var (method, registrations) = src.Model;
-
-                //var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 var sb = new StringBuilder();
 
@@ -173,22 +169,15 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
                 namespace {{method.Namespace}};
 
-                {{method.TypeAccessModifier}} {{method.TypeStatic}} partial class {{method.TypeName}}
+                {{method.TypeModifiers}} class {{method.TypeName}}
                 {
-                    {{method.MethodAccessModifier}} {{method.MethodStatic}} partial {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
+                    {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
                     {
                         {{(method.ReturnsVoid ? "" : "return ")}}services
                             {{sb.ToString().Trim()}};
                     }
                 }
                 """;
-
-                //source = $$"""
-                //// Iteration: {{Iteration}}
-                //// Elapsed: {{sw.Elapsed.TotalMilliseconds}}ms
-
-                //""" + source;
-                //Iteration++;
 
                 context.AddSource($"{method.TypeName}_{method.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
             });
