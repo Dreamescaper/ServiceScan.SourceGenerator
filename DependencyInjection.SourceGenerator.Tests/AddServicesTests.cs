@@ -146,6 +146,33 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddServicesAssignableToClosedGenericInterface()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<int>))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService<T> { }
+            public class MyIntService : IService<int> { }
+            public class MyStringService : IService<string> { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.IService<int>, GeneratorTests.MyIntService>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddServicesAssignableToAbstractClass()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(AbstractService))]";

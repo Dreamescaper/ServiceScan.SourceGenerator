@@ -5,6 +5,7 @@ namespace DependencyInjection.SourceGenerator.Model;
 
 record AttributeModel(
     string? AssignableToTypeName,
+    EquatableArray<string>? AssignableToGenericArguments,
     string? AssemblyOfTypeName,
     string Lifetime,
     string? TypeNameFilter,
@@ -25,6 +26,10 @@ record AttributeModel(
 
         var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
         var assignableToTypeName = assignableTo?.ToFullMetadataName();
+        EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
+            ? new EquatableArray<string>([.. assignableTo?.TypeArguments.Select(t => t.ToFullMetadataName())])
+            : null;
+
         var lifetime = attribute.NamedArguments.FirstOrDefault(a => a.Key == "Lifetime").Value.Value as int? switch
         {
             0 => "Singleton",
@@ -36,6 +41,6 @@ record AttributeModel(
         var textSpan = attribute.ApplicationSyntaxReference.Span;
         var location = Location.Create(syntax, textSpan);
 
-        return new(assignableToTypeName, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, location);
+        return new(assignableToTypeName, assignableToGenericArguments, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, location);
     }
 }

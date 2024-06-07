@@ -96,6 +96,12 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 ? null
                 : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
 
+            if (assignableToType != null && attribute.AssignableToGenericArguments != null)
+            {
+                var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
+                assignableToType = assignableToType.Construct(typeArguments);
+            }
+
             var types = GetTypesFromAssembly(assembly)
                 .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
 
