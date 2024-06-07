@@ -172,9 +172,6 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
         var serviceCollectionType = context.SemanticModel.Compilation.GetTypeByMetadataName("Microsoft.Extensions.DependencyInjection.IServiceCollection");
 
-        if (serviceCollectionType is null)
-            return null;
-
         if (!method.ReturnsVoid && !SymbolEqualityComparer.Default.Equals(method.ReturnType, serviceCollectionType))
             return Diagnostic.Create(WrongReturnType, method.Locations[0]);
 
