@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using DependencyInjection.SourceGenerator.Model;
 using Microsoft.CodeAnalysis;
 
 namespace DependencyInjection.SourceGenerator;
