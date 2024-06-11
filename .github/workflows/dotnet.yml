@@ -27,7 +27,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore -c Release
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build  -c Release --verbosity normal
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.3.3
       with:
