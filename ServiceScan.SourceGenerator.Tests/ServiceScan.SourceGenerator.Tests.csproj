@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DependencyInjection.SourceGenerator\DependencyInjection.SourceGenerator.csproj" />
+    <ProjectReference Include="..\ServiceScan.SourceGenerator\ServiceScan.SourceGenerator.csproj" />
   </ItemGroup>
 
 </Project>

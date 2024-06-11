@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace DependencyInjection.SourceGenerator.Playground;
+namespace ServiceScan.SourceGenerator.Playground;
 
 public static partial class ServiceCollectionExtensions
 {

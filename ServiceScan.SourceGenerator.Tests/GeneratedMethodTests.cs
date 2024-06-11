@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace DependencyInjection.SourceGenerator.Tests;
+namespace ServiceScan.SourceGenerator.Tests;
 
 public class GeneratedMethodTests
 {
@@ -25,7 +25,7 @@ public class GeneratedMethodTests
     {
         var compilation = CreateCompilation(Services,
             $$"""
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -65,7 +65,7 @@ public class GeneratedMethodTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -105,7 +105,7 @@ public class GeneratedMethodTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -141,51 +141,11 @@ public class GeneratedMethodTests
     }
 
     [Fact]
-    public void InstancePrivateVoidMethod()
+    public void InstanceVoidMethod()
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
-            using Microsoft.Extensions.DependencyInjection;
-            
-            namespace GeneratorTests;
-                    
-            public partial class ServiceType
-            {
-                [GenerateServiceRegistrations(AssignableTo = typeof(IService))]
-                private partial void AddServices(IServiceCollection services);
-            }
-            """);
-
-        var results = CSharpGeneratorDriver
-            .Create(_generator)
-            .RunGenerators(compilation)
-            .GetRunResult();
-
-        var expected = """
-            using Microsoft.Extensions.DependencyInjection;
-
-            namespace GeneratorTests;
-
-            public partial class ServiceType
-            {
-                private partial void AddServices( IServiceCollection services)
-                {
-                    services
-                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
-                }
-            }
-            """;
-
-        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
-    }
-
-    [Fact]
-    public void InstanceVoidMethodWithoutAccessModifier()
-    {
-        var compilation = CreateCompilation(Services,
-            """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;

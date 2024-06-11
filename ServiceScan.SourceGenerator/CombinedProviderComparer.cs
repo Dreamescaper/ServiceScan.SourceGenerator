@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
-using DependencyInjection.SourceGenerator.Model;
+using ServiceScan.SourceGenerator.Model;
 using Microsoft.CodeAnalysis;
 
-namespace DependencyInjection.SourceGenerator;
+namespace ServiceScan.SourceGenerator;
 
 using CombinedModel = (DiagnosticModel<MethodWithAttributesModel> Model, Compilation Compilation);
 

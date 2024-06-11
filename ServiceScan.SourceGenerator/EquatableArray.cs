@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace DependencyInjection.SourceGenerator;
+namespace ServiceScan.SourceGenerator;
 
 /// <summary>
 /// Creates a new <see cref="EquatableArray{T}"/> instance.

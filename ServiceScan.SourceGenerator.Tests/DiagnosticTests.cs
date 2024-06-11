@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace DependencyInjection.SourceGenerator.Tests;
+namespace ServiceScan.SourceGenerator.Tests;
 
 public class DiagnosticTests
 {
@@ -39,7 +39,7 @@ public class DiagnosticTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -64,7 +64,7 @@ public class DiagnosticTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -89,7 +89,7 @@ public class DiagnosticTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -114,7 +114,7 @@ public class DiagnosticTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -139,7 +139,7 @@ public class DiagnosticTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;
@@ -166,7 +166,7 @@ public class DiagnosticTests
     {
         var compilation = CreateCompilation(Services,
             """
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;

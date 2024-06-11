@@ -1,4 +1,4 @@
-﻿namespace DependencyInjection.SourceGenerator.Tests;
+﻿namespace ServiceScan.SourceGenerator.Tests;
 
 public static class Sources
 {
@@ -11,7 +11,7 @@ public static class Sources
         attribute = attribute.Replace("\n", "\n    ");
 
         return $$"""
-            using DependencyInjection.SourceGenerator;
+            using ServiceScan.SourceGenerator;
             using Microsoft.Extensions.DependencyInjection;
             
             namespace GeneratorTests;

@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 
-namespace DependencyInjection.SourceGenerator.Model;
+namespace ServiceScan.SourceGenerator.Model;
 
 record DiagnosticModel<T>
 {

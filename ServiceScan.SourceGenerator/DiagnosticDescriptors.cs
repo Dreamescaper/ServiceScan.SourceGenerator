@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 
-namespace DependencyInjection.SourceGenerator;
+namespace ServiceScan.SourceGenerator;
 
 public static class DiagnosticDescriptors
 {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace DependencyInjection.SourceGenerator.Model;
+namespace ServiceScan.SourceGenerator.Model;
 
 record MethodModel(
     string Namespace,

@@ -2,13 +2,13 @@
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using DependencyInjection.SourceGenerator.Model;
+using ServiceScan.SourceGenerator.Model;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using static DependencyInjection.SourceGenerator.DiagnosticDescriptors;
+using static ServiceScan.SourceGenerator.DiagnosticDescriptors;
 
-namespace DependencyInjection.SourceGenerator;
+namespace ServiceScan.SourceGenerator;
 
 [Generator]
 public partial class DependencyInjectionGenerator : IIncrementalGenerator
@@ -18,7 +18,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         context.RegisterPostInitializationOutput(context => context.AddSource("GenerateServiceRegistrationsAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
 
         var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName(
-                "DependencyInjection.SourceGenerator.GenerateServiceRegistrationsAttribute",
+                "ServiceScan.SourceGenerator.GenerateServiceRegistrationsAttribute",
                 predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax,
                 transform: static (context, ct) => ParseMethodModel(context))
             .Where(method => method != null);

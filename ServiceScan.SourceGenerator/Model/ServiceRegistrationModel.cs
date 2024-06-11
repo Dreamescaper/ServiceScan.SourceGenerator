@@ -1,4 +1,4 @@
-﻿namespace DependencyInjection.SourceGenerator.Model;
+﻿namespace ServiceScan.SourceGenerator.Model;
 
 record ServiceRegistrationModel(
     string Lifetime,

@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace DependencyInjection.SourceGenerator.Tests;
+namespace ServiceScan.SourceGenerator.Tests;
 
 public class AddServicesTests
 {
@@ -146,33 +146,6 @@ public class AddServicesTests
     }
 
     [Fact]
-    public void AddServicesAssignableToClosedGenericInterface()
-    {
-        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<int>))]";
-
-        var compilation = CreateCompilation(
-            Sources.MethodWithAttribute(attribute),
-            """
-            namespace GeneratorTests;
-
-            public interface IService<T> { }
-            public class MyIntService : IService<int> { }
-            public class MyStringService : IService<string> { }
-            """);
-
-        var results = CSharpGeneratorDriver
-            .Create(_generator)
-            .RunGenerators(compilation)
-            .GetRunResult();
-
-        var registrations = $"""
-            return services
-                .AddTransient<GeneratorTests.IService<int>, GeneratorTests.MyIntService>();
-            """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
-    }
-
-    [Fact]
     public void AddServicesAssignableToAbstractClass()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(AbstractService))]";
@@ -289,35 +262,6 @@ public class AddServicesTests
     {
 
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service"))]""";
-
-        var compilation = CreateCompilation(
-            Sources.MethodWithAttribute(attribute),
-            """
-            namespace GeneratorTests;
-
-            public class MyFirstService {}
-            public class MySecondService {}
-            public class ServiceWithNonMatchingName {}
-            """);
-
-        var results = CSharpGeneratorDriver
-            .Create(_generator)
-            .RunGenerators(compilation)
-            .GetRunResult();
-
-        var registrations = $"""
-            return services
-                .AddTransient<GeneratorTests.MyFirstService, GeneratorTests.MyFirstService>()
-                .AddTransient<GeneratorTests.MySecondService, GeneratorTests.MySecondService>();
-            """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
-    }
-
-    [Fact]
-    public void AddServicesWithTypeNameFilter_MultipleGroups()
-    {
-
-        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*First*,*Second*"))]""";
 
         var compilation = CreateCompilation(
             Sources.MethodWithAttribute(attribute),

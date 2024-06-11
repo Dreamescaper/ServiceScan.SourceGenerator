@@ -7,7 +7,6 @@
 	<Nullable>annotations</Nullable>
     <DevelopmentDependency>true</DevelopmentDependency>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	<PackageProjectUrl></PackageProjectUrl>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
 	<EnableNETAnalyzers>True</EnableNETAnalyzers>

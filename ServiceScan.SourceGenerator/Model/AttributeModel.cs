@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace DependencyInjection.SourceGenerator.Model;
+namespace ServiceScan.SourceGenerator.Model;
 
 record AttributeModel(
     string? AssignableToTypeName,

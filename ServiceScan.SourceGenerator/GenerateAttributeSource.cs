@@ -1,4 +1,4 @@
-﻿namespace DependencyInjection.SourceGenerator;
+﻿namespace ServiceScan.SourceGenerator;
 
 internal static class GenerateAttributeSource
 {
@@ -9,7 +9,7 @@ internal static class GenerateAttributeSource
         using System.Diagnostics;
         using Microsoft.Extensions.DependencyInjection;
 
-        namespace DependencyInjection.SourceGenerator;
+        namespace ServiceScan.SourceGenerator;
 
         [Conditional("CODE_ANALYSIS")]
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
