@@ -1,4 +1,5 @@
 # ServiceScan.SourceGenerator
+[![NuGet Version](https://img.shields.io/nuget/v/ServiceScan.SourceGenerator)](https://www.nuget.org/packages/ServiceScan.SourceGenerator/)
 
 Source generator for services registrations inspired by [Scrutor](https://github.com/khellang/Scrutor/).
 Code generation allows to have AOT compatible code, without additional hit on startup performance due to runtime assembly scanning.
@@ -40,7 +41,7 @@ The only thing left is to invoke this method on your `IServiceCollection` instan
 
 ### Register all [FluentValidation](https://github.com/FluentValidation/FluentValidation) validators
 Unlike using `FluentValidation.DependencyInjectionExtensions` package, `ServiceScan` is AOT-compatible, and doesn't affect startup performance:
-```chsarp
+```csharp
     [GenerateServiceRegistrations(AssignableTo = typeof(IValidator<>), Lifetime = ServiceLifetime.Singleton)]
     public static partial IServiceCollection AddValidators(this IServiceCollection services);
 ```
@@ -60,8 +61,23 @@ Unlike using `FluentValidation.DependencyInjectionExtensions` package, `ServiceS
 ```
 It adds MediatR handlers, which would work for simple cases, although you might need to add other types like PipelineBehaviors or NotificationHandlers.
 
-### Add all types from your project based on name filter:
-```chsarp
-    [GenerateServiceRegistrations(TypeNameFilter = "MyNamespace.*Service", Lifetime = ServiceLifetime.Scoped)]
+### Add types from your project based on name filter as their implemented interfaces:
+```csharp
+    [GenerateServiceRegistrations(
+        TypeNameFilter = "MyNamespace.*Service",
+        AsImplemetedInterfaces = true,
+        Lifetime = ServiceLifetime.Scoped)]
     private static partial IServiceCollection AddServices(this IServiceCollection services);
 ```
+
+## Parameters
+
+`GenerateServiceRegistrations` attribute has the following properties:
+| Property | Description |
+| --- | --- |
+| **FromAssemblyOf** |Set the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
+| **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type. |
+| **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type. |
+| **Lifetime** | Set the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
+| **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. This option is ignored if `AssignableTo` is set. |
+| **TypeNameFilter** | Set this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
