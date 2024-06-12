@@ -11,8 +11,12 @@
 	<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
 	<EnableNETAnalyzers>True</EnableNETAnalyzers>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
-	<RepositoryUrl>https://github.com/Dreamescaper/DependencyInjection.SourceGenerator</RepositoryUrl>
+	<RepositoryUrl>https://github.com/Dreamescaper/ServiceScan.SourceGenerator</RepositoryUrl>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <PackageProjectUrl>https://github.com/Dreamescaper/ServiceScan.SourceGenerator</PackageProjectUrl>
+    <Authors>Oleksandr Liakhevych</Authors>
+    <PackageTags>DependencyInjection;SourceGenerator</PackageTags>
+    <Description>Types scanning source generator for Microsoft.Extensions.DependencyInjection</Description>
   </PropertyGroup>
 
   <ItemGroup>
