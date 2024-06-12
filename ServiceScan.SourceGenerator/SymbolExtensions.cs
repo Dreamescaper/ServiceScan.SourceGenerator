@@ -6,6 +6,8 @@ public static class SymbolExtensions
 {
     public static string ToFullMetadataName(this ISymbol symbol)
     {
-        return symbol.ContainingNamespace.ToDisplayString() + "." + symbol.MetadataName;
+        return symbol.ContainingNamespace.IsGlobalNamespace
+            ? symbol.MetadataName
+            : symbol.ContainingNamespace.ToDisplayString() + "." + symbol.MetadataName;
     }
 }

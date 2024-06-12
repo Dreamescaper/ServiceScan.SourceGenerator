@@ -10,7 +10,8 @@ record AttributeModel(
     string Lifetime,
     string? TypeNameFilter,
     bool AsImplementedInterfaces,
-    Location Location)
+    Location Location,
+    bool HasErrors)
 {
     public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null;
 
@@ -41,6 +42,8 @@ record AttributeModel(
         var textSpan = attribute.ApplicationSyntaxReference.Span;
         var location = Location.Create(syntax, textSpan);
 
-        return new(assignableToTypeName, assignableToGenericArguments, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, location);
+        var hasError = assemblyType is { TypeKind: TypeKind.Error } || assignableTo is { TypeKind: TypeKind.Error };
+
+        return new(assignableToTypeName, assignableToGenericArguments, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, location, hasError);
     }
 }

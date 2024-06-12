@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using ServiceScan.SourceGenerator.Model;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using ServiceScan.SourceGenerator.Model;
 using static ServiceScan.SourceGenerator.DiagnosticDescriptors;
 
 namespace ServiceScan.SourceGenerator;
@@ -56,10 +56,12 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
                 var returnType = method.ReturnsVoid ? "void" : "IServiceCollection";
 
+                var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
+
                 var source = $$"""
                 using Microsoft.Extensions.DependencyInjection;
 
-                namespace {{method.Namespace}};
+                {{namespaceDeclaration}}
 
                 {{method.TypeModifiers}} class {{method.TypeName}}
                 {
@@ -185,6 +187,9 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
             if (!attributeData[i].HasSearchCriteria)
                 return Diagnostic.Create(MissingSearchCriteria, attributeData[i].Location);
+
+            if (attributeData[i].HasErrors)
+                return null;
         }
 
         var model = MethodModel.Create(method, context.TargetNode);

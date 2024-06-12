@@ -374,6 +374,22 @@ public class AddServicesTests
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void DontGenerateAnythingIfTypeIsInvalid()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IWrongService))]";
+
+        var compilation = CreateCompilation(Sources.MethodWithAttribute(attribute));
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        // One file for generated attribute itself.
+        Assert.Single(results.GeneratedTrees);
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;

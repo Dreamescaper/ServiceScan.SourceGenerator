@@ -16,7 +16,7 @@ record MethodModel(
     public static MethodModel Create(IMethodSymbol method, SyntaxNode syntax)
     {
         return new MethodModel(
-            Namespace: method.ContainingNamespace.ToDisplayString(),
+            Namespace: method.ContainingNamespace.IsGlobalNamespace ? null : method.ContainingNamespace.ToDisplayString(),
             TypeName: method.ContainingType.Name,
             TypeMetadataName: method.ContainingType.ToFullMetadataName(),
             TypeModifiers: GetModifiers(GetTypeSyntax(syntax)),

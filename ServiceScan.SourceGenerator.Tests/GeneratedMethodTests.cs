@@ -180,6 +180,45 @@ public class GeneratedMethodTests
         Assert.Equal(expected, results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void MethodInGlobalNamespace()
+    {
+        var compilation = CreateCompilation(Services,
+            """
+            using ServiceScan.SourceGenerator;
+            using Microsoft.Extensions.DependencyInjection;
+            using GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IService))]
+                public static partial IServiceCollection AddServices(this IServiceCollection services);
+            }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            using Microsoft.Extensions.DependencyInjection;
+
+
+
+            public static partial class ServicesExtensions
+            {
+                public static partial IServiceCollection AddServices(this IServiceCollection services)
+                {
+                    return services
+                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
+                }
+            }
+            """;
+
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
