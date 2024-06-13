@@ -33,10 +33,10 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             static (context, src) =>
             {
                 if (src.Diagnostic != null)
-                {
                     context.ReportDiagnostic(src.Diagnostic);
+
+                if (src.Model == null)
                     return;
-                }
 
                 var (method, registrations) = src.Model;
 
@@ -80,9 +80,10 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, Compilation) context)
     {
         var (diagnosticModel, compilation) = context;
+        var diagnostic = diagnosticModel.Diagnostic;
 
-        if (diagnosticModel.Diagnostic != null)
-            return diagnosticModel.Diagnostic;
+        if (diagnostic != null)
+            return diagnostic;
 
         var (method, attributes) = diagnosticModel.Model;
 
@@ -158,10 +159,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             }
 
             if (!typesFound)
-                return Diagnostic.Create(NoMatchingTypesFound, attribute.Location);
+                diagnostic ??= Diagnostic.Create(NoMatchingTypesFound, attribute.Location);
         }
 
-        return new MethodImplementationModel(method, new EquatableArray<ServiceRegistrationModel>([.. registrations]));
+        var implementationModel = new MethodImplementationModel(method, new EquatableArray<ServiceRegistrationModel>([.. registrations]));
+        return new(diagnostic, implementationModel);
     }
 
     private static DiagnosticModel<MethodWithAttributesModel> ParseMethodModel(GeneratorAttributeSyntaxContext context)
