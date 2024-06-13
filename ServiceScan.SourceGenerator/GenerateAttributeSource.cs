@@ -40,8 +40,9 @@ internal static class GenerateAttributeSource
             public bool AsImplementedInterfaces { get; set; }
         
             /// <summary>
-            /// This option will also register the type itself.
-            /// Combined with <see cref="AsImplementedInterfaces"/>, TODO.
+            /// This option will register the type itself.
+            /// It can be combined with <see cref="AsImplementedInterfaces"/>, in that case interfaces will be
+            /// "forwarded" to "self" implementation.
             /// </summary>
             public bool AsSelf { get; set; }
 
