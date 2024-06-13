@@ -159,6 +159,22 @@ public class DiagnosticTests
             .GetRunResult();
 
         Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NoMatchingTypesFound);
+
+        var expectedFile = """
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial IServiceCollection AddServices(this IServiceCollection services)
+                {
+                    return services
+                        ;
+                }
+            }
+            """;
+        Assert.Equal(expectedFile, results.GeneratedTrees[1].ToString());
     }
 
     [Fact]

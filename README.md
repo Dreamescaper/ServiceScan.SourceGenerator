@@ -61,13 +61,13 @@ Unlike using `FluentValidation.DependencyInjectionExtensions` package, `ServiceS
 ```
 It adds MediatR handlers, which would work for simple cases, although you might need to add other types like PipelineBehaviors or NotificationHandlers.
 
-### Add types from your project based on name filter as their implemented interfaces:
+### Add all repository types from your project based on name filter as their implemented interfaces:
 ```csharp
     [GenerateServiceRegistrations(
-        TypeNameFilter = "MyNamespace.*Service",
+        TypeNameFilter = "*Repository",
         AsImplemetedInterfaces = true,
         Lifetime = ServiceLifetime.Scoped)]
-    private static partial IServiceCollection AddServices(this IServiceCollection services);
+    private static partial IServiceCollection AddRepositories(this IServiceCollection services);
 ```
 
 ## Parameters
@@ -76,7 +76,6 @@ It adds MediatR handlers, which would work for simple cases, although you might 
 | Property | Description |
 | --- | --- |
 | **FromAssemblyOf** |Set the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
-| **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type. |
 | **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type. |
 | **Lifetime** | Set the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
 | **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. This option is ignored if `AssignableTo` is set. |

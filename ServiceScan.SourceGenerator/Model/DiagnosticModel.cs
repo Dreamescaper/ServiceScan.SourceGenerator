@@ -2,12 +2,8 @@
 
 namespace ServiceScan.SourceGenerator.Model;
 
-record DiagnosticModel<T>
+record DiagnosticModel<T>(Diagnostic? Diagnostic, T? Model)
 {
-    public T? Model { get; init; }
-    public Diagnostic? Diagnostic { get; init; }
-
-    public static implicit operator DiagnosticModel<T>(T model) => new() { Model = model };
-
-    public static implicit operator DiagnosticModel<T>(Diagnostic diagnostic) => new() { Diagnostic = diagnostic };
+    public static implicit operator DiagnosticModel<T>(T model) => new(null, model);
+    public static implicit operator DiagnosticModel<T>(Diagnostic diagnostic) => new(diagnostic, default);
 }

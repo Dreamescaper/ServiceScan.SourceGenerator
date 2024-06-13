@@ -36,6 +36,6 @@ public static class DiagnosticDescriptors
         "No matching types found",
         "There are no types matching attribute's search criteria",
         "Usage",
-        DiagnosticSeverity.Error,
+        DiagnosticSeverity.Warning,
         true);
 }
