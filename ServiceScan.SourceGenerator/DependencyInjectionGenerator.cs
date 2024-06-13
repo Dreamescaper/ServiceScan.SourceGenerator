@@ -50,7 +50,10 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     }
                     else
                     {
-                        sb.AppendLine($"            .Add{registration.Lifetime}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>()");
+                        if (registration.ResolveImplementation)
+                            sb.AppendLine($"            .Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())");
+                        else
+                            sb.AppendLine($"            .Add{registration.Lifetime}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>()");
                     }
                 }
 
@@ -121,18 +124,13 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
                     continue;
 
-                IEnumerable<INamedTypeSymbol> serviceTypes = null;
-
-                if (matchedType != null)
+                IEnumerable<INamedTypeSymbol> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
                 {
-                    serviceTypes = [matchedType];
-                }
-                else
-                {
-                    serviceTypes = attribute.AsImplementedInterfaces
-                        ? implementationType.AllInterfaces
-                        : [implementationType];
-                }
+                    (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
+                    (false, true) => implementationType.AllInterfaces,
+                    (true, false) => [implementationType],
+                    _ => [matchedType ?? implementationType]
+                };
 
                 foreach (var serviceType in serviceTypes)
                 {
@@ -143,13 +141,13 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                             ? serviceType.ConstructUnboundGenericType().ToDisplayString()
                             : serviceType.ToDisplayString();
 
-                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, true);
+                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, false, true);
                         registrations.Add(registration);
                     }
                     else
                     {
-
-                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), false);
+                        var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
+                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), shouldResolve, false);
                         registrations.Add(registration);
                     }
 
