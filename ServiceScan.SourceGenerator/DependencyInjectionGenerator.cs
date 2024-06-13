@@ -29,7 +29,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         var methodImplementationsProvider = combinedProvider
             .Select(static (context, ct) => FindServicesToRegister(context));
 
-        context.RegisterImplementationSourceOutput(methodImplementationsProvider,
+        context.RegisterSourceOutput(methodImplementationsProvider,
             static (context, src) =>
             {
                 if (src.Diagnostic != null)
