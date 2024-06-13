@@ -23,7 +23,8 @@ internal static class GenerateAttributeSource
 
             /// <summary>
             /// Set the type that the registered types must be assignable to.
-            /// Types will be registered with this type as the service type.
+            /// Types will be registered with this type as the service type,
+            /// unless <see cref="AsImplementedInterfaces"/> or <see cref="AsSelf"/> is set.
             /// </summary>
             public Type? AssignableTo { get; set; }
 
@@ -32,12 +33,18 @@ internal static class GenerateAttributeSource
             /// <see cref="ServiceLifetime.Transient"/> is used if not specified.
             /// </summary>
             public ServiceLifetime Lifetime { get; set; }
-
+        
             /// <summary>
-            /// If set to true, the registered types will be registered as implemented interfaces instead of their actual type.
-            /// This option is ignored if <see cref="AssignableTo"/> is set.
+            /// If set to true, types will be registered as implemented interfaces instead of their actual type.
             /// </summary>
             public bool AsImplementedInterfaces { get; set; }
+        
+            /// <summary>
+            /// If set to true, types will be registered with their actual type.
+            /// It can be combined with <see cref="AsImplementedInterfaces"/>, in that case implemeted interfaces will be
+            /// "forwarded" to "self" implementation.
+            /// </summary>
+            public bool AsSelf { get; set; }
 
             /// <summary>
             /// Set this value to filter the types to register by their full name. 
