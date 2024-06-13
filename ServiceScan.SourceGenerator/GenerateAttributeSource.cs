@@ -35,13 +35,13 @@ internal static class GenerateAttributeSource
             public ServiceLifetime Lifetime { get; set; }
         
             /// <summary>
-            /// If set to true, the registered types will be registered as implemented interfaces instead of their actual type.
+            /// If set to true, types will be registered as implemented interfaces instead of their actual type.
             /// </summary>
             public bool AsImplementedInterfaces { get; set; }
         
             /// <summary>
-            /// This option will register the type itself.
-            /// It can be combined with <see cref="AsImplementedInterfaces"/>, in that case interfaces will be
+            /// If set to true, types will be registered with their actual type.
+            /// It can be combined with <see cref="AsImplementedInterfaces"/>, in that case implemeted interfaces will be
             /// "forwarded" to "self" implementation.
             /// </summary>
             public bool AsSelf { get; set; }
