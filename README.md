@@ -76,7 +76,8 @@ It adds MediatR handlers, which would work for simple cases, although you might 
 | Property | Description |
 | --- | --- |
 | **FromAssemblyOf** |Set the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
-| **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type. |
+| **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type, unless `AsImplementedInterfaces` or `AsSelf` is set. |
 | **Lifetime** | Set the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
-| **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. This option is ignored if `AssignableTo` is set. |
+| **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. |
+| **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case implemeted interfaces will be "forwarded" to an actual implementation type |
 | **TypeNameFilter** | Set this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
