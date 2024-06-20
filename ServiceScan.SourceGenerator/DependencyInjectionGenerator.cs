@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -87,61 +85,6 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             });
     }
 
-    private static List<ServiceRegistrationModel> GetRegistrationsFromSourceCode(AttributeModel attribute, ImmutableArray<TypeModel> sourceTypes)
-    {
-        var assignableToType = attribute.AssignableToType;
-
-        var types = sourceTypes
-            .GroupBy(t => t.DisplayString).Select(g => g.First()) // distinct-by fully qualified name to account for partial classes
-            .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
-
-        if (attribute.TypeNameFilter != null)
-        {
-            var regex = $"^({Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
-            types = types.Where(t => Regex.IsMatch(t.DisplayString, regex));
-        }
-
-        var registrations = new List<ServiceRegistrationModel>();
-        foreach (var t in types)
-        {
-            var implementationType = t;
-
-            TypeModel? matchedType = null;
-            if (assignableToType != null && !SymbolExtensions.IsAssignableTo(implementationType, assignableToType, out matchedType))
-                continue;
-
-            IEnumerable<TypeModel> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
-            {
-                (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
-                (false, true) => implementationType.AllInterfaces,
-                (true, false) => [implementationType],
-                _ => [matchedType ?? implementationType]
-            };
-
-            foreach (var serviceType in serviceTypes)
-            {
-                if (implementationType.IsGenericType)
-                {
-                    var implementationTypeName = implementationType.UnboundGenericDisplayString;
-                    var serviceTypeName = serviceType.IsGenericType
-                        ? serviceType.UnboundGenericDisplayString
-                        : serviceType.DisplayString;
-
-                    var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, false, true);
-                    registrations.Add(registration);
-                }
-                else
-                {
-                    var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && implementationType != serviceType;
-                    var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.DisplayString, implementationType.DisplayString, shouldResolve, false);
-                    registrations.Add(registration);
-                }
-            }
-        }
-
-        return registrations;
-    }
-
     private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, ImmutableArray<TypeModel>) context)
     {
         var (diagnosticModel, sourceTypes) = context;
@@ -152,13 +95,16 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
         var (method, attributes) = diagnosticModel.Model;
 
+        var types = sourceTypes
+            .GroupBy(t => t.DisplayString).Select(g => g.First()); // distinct-by fully qualified name to account for partial classes
+
         var registrations = new List<ServiceRegistrationModel>();
 
         foreach (var attribute in attributes)
         {
             // get registrations from the assembly specified in the attribute or from source code
             var regs = attribute.RegistrationsFromAssembly?.ToList()
-                ?? GetRegistrationsFromSourceCode(attribute, sourceTypes);
+                ?? SymbolExtensions.GetRegistrations(types, attribute.AssignableToType, attribute.TypeNameFilter, attribute.AsSelf, attribute.AsImplementedInterfaces, attribute.Lifetime);
 
             if (!regs.Any())
                 diagnostic ??= Diagnostic.Create(NoMatchingTypesFound, attribute.Location);
