@@ -1,4 +1,7 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 
 namespace ServiceScan.SourceGenerator.Model;
@@ -6,7 +9,7 @@ namespace ServiceScan.SourceGenerator.Model;
 record AttributeModel(
     string? AssignableToTypeName,
     EquatableArray<string>? AssignableToGenericArguments,
-    string? AssemblyOfTypeName,
+    EquatableArray<ServiceRegistrationModel>? RegistrationsFromAssembly, // if null, use types found from source code
     string Lifetime,
     string? TypeNameFilter,
     bool AsImplementedInterfaces,
@@ -16,7 +19,7 @@ record AttributeModel(
 {
     public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null;
 
-    public static AttributeModel Create(AttributeData attribute)
+    public static AttributeModel Create(AttributeData attribute, Compilation compilation)
     {
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
@@ -27,12 +30,6 @@ record AttributeModel(
         if (string.IsNullOrWhiteSpace(typeNameFilter))
             typeNameFilter = null;
 
-        var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
-        var assignableToTypeName = assignableTo?.ToFullMetadataName();
-        EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
-            ? new EquatableArray<string>([.. assignableTo?.TypeArguments.Select(t => t.ToFullMetadataName())])
-            : null;
-
         var lifetime = attribute.NamedArguments.FirstOrDefault(a => a.Key == "Lifetime").Value.Value as int? switch
         {
             0 => "Singleton",
@@ -40,12 +37,86 @@ record AttributeModel(
             _ => "Transient"
         };
 
+        var registrations = GetRegistrationsFromAssembly(assemblyType, compilation, typeNameFilter, asSelf, asImplementedInterfaces, assignableTo, lifetime);
+
+        var assignableToTypeName = assignableTo?.ToFullMetadataName();
+        EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
+            ? new EquatableArray<string>([.. assignableTo?.TypeArguments.Select(t => t.ToFullMetadataName())])
+            : null;
+
         var syntax = attribute.ApplicationSyntaxReference.SyntaxTree;
         var textSpan = attribute.ApplicationSyntaxReference.Span;
         var location = Location.Create(syntax, textSpan);
 
         var hasError = assemblyType is { TypeKind: TypeKind.Error } || assignableTo is { TypeKind: TypeKind.Error };
 
-        return new(assignableToTypeName, assignableToGenericArguments, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, asSelf, location, hasError);
+        return new(assignableToTypeName, assignableToGenericArguments, registrations, lifetime, typeNameFilter, asImplementedInterfaces, asSelf, location, hasError);
+    }
+
+    private static EquatableArray<ServiceRegistrationModel>? GetRegistrationsFromAssembly(
+        INamedTypeSymbol? fromAssemblyOf,
+        Compilation compilation,
+        string? typeNameFilter,
+        bool asSelf,
+        bool asImplementedInterfaces,
+        INamedTypeSymbol? assignableToType,
+        string lifetime)
+    {
+        if (fromAssemblyOf is null)
+            return null;
+
+        // if user specifies FromAssemblyOf = typeof(SomeType), but SomeType is from the same assembly as the method with the attribute
+        if (SymbolEqualityComparer.Default.Equals(fromAssemblyOf.ContainingAssembly, compilation.Assembly))
+            return null;
+
+        var registrations = new List<ServiceRegistrationModel>();
+
+        var types = fromAssemblyOf.ContainingAssembly.GetTypesFromAssembly()
+            .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
+
+        if (typeNameFilter != null)
+        {
+            var regex = $"^({Regex.Escape(typeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
+            types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
+        }
+
+        foreach (var t in types)
+        {
+            var implementationType = t;
+
+            INamedTypeSymbol matchedType = null;
+            if (assignableToType != null && !SymbolExtensions.IsAssignableTo(implementationType, assignableToType, out matchedType))
+                continue;
+
+            IEnumerable<INamedTypeSymbol> serviceTypes = (asSelf, asImplementedInterfaces) switch
+            {
+                (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
+                (false, true) => implementationType.AllInterfaces,
+                (true, false) => [implementationType],
+                _ => [matchedType ?? implementationType]
+            };
+
+            foreach (var serviceType in serviceTypes)
+            {
+                if (implementationType.IsGenericType)
+                {
+                    var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                    var serviceTypeName = serviceType.IsGenericType
+                        ? serviceType.ConstructUnboundGenericType().ToDisplayString()
+                        : serviceType.ToDisplayString();
+
+                    var registration = new ServiceRegistrationModel(lifetime, serviceTypeName, implementationTypeName, false, true);
+                    registrations.Add(registration);
+                }
+                else
+                {
+                    var shouldResolve = asSelf && asImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
+                    var registration = new ServiceRegistrationModel(lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), shouldResolve, false);
+                    registrations.Add(registration);
+                }
+            }
+        }
+
+        return new(registrations.ToArray());
     }
 }
