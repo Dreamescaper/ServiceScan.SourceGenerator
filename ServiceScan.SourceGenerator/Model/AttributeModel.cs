@@ -15,7 +15,7 @@ record AttributeModel(
 {
     public bool HasSearchCriteria => TypeNameFilter != null || AssignableToType != null;
 
-    public static AttributeModel Create(AttributeData attribute, Compilation compilation)
+    public static AttributeModel Create(AttributeData attribute, IAssemblySymbol currentAssembly)
     {
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
@@ -34,7 +34,7 @@ record AttributeModel(
         };
 
         var assignableToTypeModel = assignableTo is not null ? TypeModel.Create(assignableTo) : null;
-        var registrations = GetRegistrationsFromAssembly(assemblyType, compilation, typeNameFilter, asSelf, asImplementedInterfaces, assignableToTypeModel, lifetime);
+        var registrations = GetRegistrationsFromAssembly(assemblyType, currentAssembly, typeNameFilter, asSelf, asImplementedInterfaces, assignableToTypeModel, lifetime);
 
         var syntax = attribute.ApplicationSyntaxReference.SyntaxTree;
         var textSpan = attribute.ApplicationSyntaxReference.Span;
@@ -47,7 +47,7 @@ record AttributeModel(
 
     private static EquatableArray<ServiceRegistrationModel>? GetRegistrationsFromAssembly(
         INamedTypeSymbol? fromAssemblyOf,
-        Compilation compilation,
+        IAssemblySymbol currentAssembly,
         string? typeNameFilter,
         bool asSelf,
         bool asImplementedInterfaces,
@@ -58,7 +58,7 @@ record AttributeModel(
             return null;
 
         // if user specifies FromAssemblyOf = typeof(SomeType), but SomeType is from the same assembly as the method with the attribute
-        if (SymbolEqualityComparer.Default.Equals(fromAssemblyOf.ContainingAssembly, compilation.Assembly))
+        if (SymbolEqualityComparer.Default.Equals(fromAssemblyOf.ContainingAssembly, currentAssembly))
             return null;
 
         var types = fromAssemblyOf.ContainingAssembly

@@ -135,7 +135,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         var attributeData = new AttributeModel[context.Attributes.Length];
         for (var i = 0; i < context.Attributes.Length; i++)
         {
-            attributeData[i] = AttributeModel.Create(context.Attributes[i], context.SemanticModel.Compilation);
+            attributeData[i] = AttributeModel.Create(context.Attributes[i], context.TargetSymbol.ContainingAssembly);
 
             if (!attributeData[i].HasSearchCriteria)
                 return Diagnostic.Create(MissingSearchCriteria, attributeData[i].Location);
