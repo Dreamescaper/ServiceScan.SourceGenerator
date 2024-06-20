@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using ServiceScan.SourceGenerator.Model;
 
 namespace ServiceScan.SourceGenerator;
 
-public static class SymbolExtensions
+internal static class SymbolExtensions
 {
     public static string ToFullMetadataName(this ISymbol symbol)
     {
@@ -78,6 +79,60 @@ public static class SymbolExtensions
             while (baseType != null)
             {
                 if (SymbolEqualityComparer.Default.Equals(baseType, assignableTo))
+                {
+                    matchedType = baseType;
+                    return true;
+                }
+
+                baseType = baseType.BaseType;
+            }
+        }
+
+        matchedType = null;
+        return false;
+    }
+
+    public static bool IsAssignableTo(TypeModel type, TypeModel assignableTo, out TypeModel matchedType)
+    {
+        if (type == assignableTo)
+        {
+            matchedType = type;
+            return true;
+        }
+
+        if (assignableTo.IsGenericType && assignableTo.IsUnboundGenericType)
+        {
+            if (assignableTo.TypeKind == TypeKind.Interface)
+            {
+                var matchingInterface = type.AllInterfaces.FirstOrDefault(i => i.IsGenericType && i.OriginalDefinition == assignableTo);
+                matchedType = matchingInterface;
+                return matchingInterface != null;
+            }
+
+            var baseType = type.BaseType;
+            while (baseType != null)
+            {
+                if (baseType.IsGenericType && baseType.OriginalDefinition == assignableTo)
+                {
+                    matchedType = baseType;
+                    return true;
+                }
+
+                baseType = baseType.BaseType;
+            }
+        }
+        else
+        {
+            if (assignableTo.TypeKind == TypeKind.Interface)
+            {
+                matchedType = assignableTo;
+                return type.AllInterfaces.Contains(assignableTo);
+            }
+
+            var baseType = type.BaseType;
+            while (baseType != null)
+            {
+                if (baseType == assignableTo)
                 {
                     matchedType = baseType;
                     return true;

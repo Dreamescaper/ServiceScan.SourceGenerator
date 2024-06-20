@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -24,8 +25,13 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 transform: static (context, ct) => ParseMethodModel(context))
             .Where(method => method != null);
 
-        var combinedProvider = methodProvider.Combine(context.CompilationProvider)
-            .WithComparer(CombinedProviderComparer.Instance);
+        var typeProvider = context.SyntaxProvider.CreateSyntaxProvider(
+            (node, _) => node is TypeDeclarationSyntax,
+            (ctx, ct) => TypeModel.Create(ctx.Node, ctx.SemanticModel, ct))
+            .Where(x => x is not null)
+            .Collect();
+
+        var combinedProvider = methodProvider.Combine(typeProvider);
 
         var methodImplementationsProvider = combinedProvider
             .Select(static (context, ct) => FindServicesToRegister(context));
@@ -81,27 +87,18 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             });
     }
 
-    private static List<ServiceRegistrationModel> GetRegistrationsFromSourceCode(AttributeModel attribute, Compilation compilation, string todoTypeName)
+    private static List<ServiceRegistrationModel> GetRegistrationsFromSourceCode(AttributeModel attribute, ImmutableArray<TypeModel> sourceTypes)
     {
-        var assembly = compilation.GetTypeByMetadataName(todoTypeName).ContainingAssembly;
+        var assignableToType = attribute.AssignableToType;
 
-        var assignableToType = attribute.AssignableToTypeName is null
-        ? null
-            : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
-
-        if (assignableToType != null && attribute.AssignableToGenericArguments != null)
-        {
-            var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
-            assignableToType = assignableToType.Construct(typeArguments);
-        }
-
-        var types = assembly.GetTypesFromAssembly()
+        var types = sourceTypes
+            .GroupBy(t => t.DisplayString).Select(g => g.First()) // distinct-by fully qualified name to account for partial classes
             .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
 
         if (attribute.TypeNameFilter != null)
         {
             var regex = $"^({Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
-            types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
+            types = types.Where(t => Regex.IsMatch(t.DisplayString, regex));
         }
 
         var registrations = new List<ServiceRegistrationModel>();
@@ -109,11 +106,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         {
             var implementationType = t;
 
-            INamedTypeSymbol matchedType = null;
+            TypeModel? matchedType = null;
             if (assignableToType != null && !SymbolExtensions.IsAssignableTo(implementationType, assignableToType, out matchedType))
                 continue;
 
-            IEnumerable<INamedTypeSymbol> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
+            IEnumerable<TypeModel> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
             {
                 (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
                 (false, true) => implementationType.AllInterfaces,
@@ -125,18 +122,18 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             {
                 if (implementationType.IsGenericType)
                 {
-                    var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                    var implementationTypeName = implementationType.UnboundGenericDisplayString;
                     var serviceTypeName = serviceType.IsGenericType
-                        ? serviceType.ConstructUnboundGenericType().ToDisplayString()
-                        : serviceType.ToDisplayString();
+                        ? serviceType.UnboundGenericDisplayString
+                        : serviceType.DisplayString;
 
                     var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, false, true);
                     registrations.Add(registration);
                 }
                 else
                 {
-                    var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
-                    var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), shouldResolve, false);
+                    var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && implementationType != serviceType;
+                    var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.DisplayString, implementationType.DisplayString, shouldResolve, false);
                     registrations.Add(registration);
                 }
             }
@@ -145,9 +142,9 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         return registrations;
     }
 
-    private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, Compilation) context)
+    private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, ImmutableArray<TypeModel>) context)
     {
-        var (diagnosticModel, compilation) = context;
+        var (diagnosticModel, sourceTypes) = context;
         var diagnostic = diagnosticModel.Diagnostic;
 
         if (diagnostic != null)
@@ -161,7 +158,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         {
             // get registrations from the assembly specified in the attribute or from source code
             var regs = attribute.RegistrationsFromAssembly?.ToList()
-                ?? GetRegistrationsFromSourceCode(attribute, compilation, method.TypeMetadataName);
+                ?? GetRegistrationsFromSourceCode(attribute, sourceTypes);
 
             if (!regs.Any())
                 diagnostic ??= Diagnostic.Create(NoMatchingTypesFound, attribute.Location);

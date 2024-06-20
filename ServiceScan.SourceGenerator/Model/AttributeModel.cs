@@ -7,7 +7,6 @@ using Microsoft.CodeAnalysis;
 namespace ServiceScan.SourceGenerator.Model;
 
 record AttributeModel(
-    string? AssignableToTypeName,
     EquatableArray<string>? AssignableToGenericArguments,
     EquatableArray<ServiceRegistrationModel>? RegistrationsFromAssembly, // if null, use types found from source code
     string Lifetime,
@@ -15,9 +14,10 @@ record AttributeModel(
     bool AsImplementedInterfaces,
     bool AsSelf,
     Location Location,
-    bool HasErrors)
+    bool HasErrors,
+    TypeModel? AssignableToType)
 {
-    public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null;
+    public bool HasSearchCriteria => TypeNameFilter != null || AssignableToType != null;
 
     public static AttributeModel Create(AttributeData attribute, Compilation compilation)
     {
@@ -26,6 +26,10 @@ record AttributeModel(
         var asImplementedInterfaces = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsImplementedInterfaces").Value.Value is true;
         var asSelf = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsSelf").Value.Value is true;
         var typeNameFilter = attribute.NamedArguments.FirstOrDefault(a => a.Key == "TypeNameFilter").Value.Value as string;
+        
+        EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
+            ? new EquatableArray<string>([.. assignableTo?.TypeArguments.Select(t => t.ToFullMetadataName())])
+            : null;
 
         if (string.IsNullOrWhiteSpace(typeNameFilter))
             typeNameFilter = null;
@@ -37,12 +41,9 @@ record AttributeModel(
             _ => "Transient"
         };
 
-        var registrations = GetRegistrationsFromAssembly(assemblyType, compilation, typeNameFilter, asSelf, asImplementedInterfaces, assignableTo, lifetime);
+        var registrations = GetRegistrationsFromAssembly(assemblyType, compilation, typeNameFilter, asSelf, asImplementedInterfaces, assignableTo, assignableToGenericArguments, lifetime);
 
-        var assignableToTypeName = assignableTo?.ToFullMetadataName();
-        EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
-            ? new EquatableArray<string>([.. assignableTo?.TypeArguments.Select(t => t.ToFullMetadataName())])
-            : null;
+        var typeModel = assignableTo is not null ? TypeModel.Create(assignableTo) : null;
 
         var syntax = attribute.ApplicationSyntaxReference.SyntaxTree;
         var textSpan = attribute.ApplicationSyntaxReference.Span;
@@ -50,7 +51,7 @@ record AttributeModel(
 
         var hasError = assemblyType is { TypeKind: TypeKind.Error } || assignableTo is { TypeKind: TypeKind.Error };
 
-        return new(assignableToTypeName, assignableToGenericArguments, registrations, lifetime, typeNameFilter, asImplementedInterfaces, asSelf, location, hasError);
+        return new(assignableToGenericArguments, registrations, lifetime, typeNameFilter, asImplementedInterfaces, asSelf, location, hasError, typeModel);
     }
 
     private static EquatableArray<ServiceRegistrationModel>? GetRegistrationsFromAssembly(
@@ -60,6 +61,7 @@ record AttributeModel(
         bool asSelf,
         bool asImplementedInterfaces,
         INamedTypeSymbol? assignableToType,
+        EquatableArray<string>? assignableToGenericArguments,
         string lifetime)
     {
         if (fromAssemblyOf is null)
