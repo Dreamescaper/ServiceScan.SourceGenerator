@@ -266,12 +266,6 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         return false;
     }
 
-    private static IEnumerable<INamedTypeSymbol> GetTypesFromAssembly(IAssemblySymbol assemblySymbol)
-    {
-        var @namespace = assemblySymbol.GlobalNamespace;
-        return GetTypesFromNamespace(@namespace);
-    }
-
     private static IEnumerable<INamedTypeSymbol> GetTypesFromNamespace(INamespaceSymbol namespaceSymbol)
     {
         foreach (var member in namespaceSymbol.GetMembers())
