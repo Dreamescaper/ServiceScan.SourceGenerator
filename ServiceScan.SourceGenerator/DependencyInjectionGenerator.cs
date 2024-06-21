@@ -15,8 +15,6 @@ namespace ServiceScan.SourceGenerator;
 [Generator]
 public partial class DependencyInjectionGenerator : IIncrementalGenerator
 {
-    private sealed record AssemblyTypes(string AssemblyName, EquatableArray<TypeModel> Types);
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(context => context.AddSource("GenerateServiceRegistrationsAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
@@ -27,10 +25,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             .SelectMany(static (refs, ct) =>
             {
                 var comp = CSharpCompilation.Create("temp", references: refs);
-                var types = GetTypesFromNamespace(comp.GlobalNamespace).Select(TypeModel.Create).ToArray();
-                return types
-                    .GroupBy(t => t.AssemblyName)
-                    .Select(g => new AssemblyTypes(g.Key, new(g.ToArray())));
+                return GetTypesFromNamespace(comp.GlobalNamespace).Select(TypeModel.Create);
             })
             .Collect();
 
@@ -106,14 +101,14 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     }
 
     private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister(
-        (DiagnosticModel<MethodWithAttributesModel>, ((ImmutableArray<AssemblyTypes>, ImmutableArray<TypeModel>), string)) context)
+        (DiagnosticModel<MethodWithAttributesModel>, ((ImmutableArray<TypeModel>, ImmutableArray<TypeModel>), string)) context)
     {
-        var (diagnosticModel, (combinedTypes, asmName)) = context;
+        var (diagnosticModel, ((refTypes, sourceTypes), asmName)) = context;
         var diagnostic = diagnosticModel.Diagnostic;
 
-        var allTypes = combinedTypes.Item1.ToDictionary(x => x.AssemblyName, x => x.Types.ToList());
-        var sourceTypes = combinedTypes.Item2.GroupBy(t => t.DisplayString).Select(g => g.First()).ToList(); // distinct-by fully qualified name to account for partial types
-        allTypes[asmName] = sourceTypes; // add the source-code collected types to the dictionary under the assembly name of the current compilation
+        var allTypes = refTypes.GroupBy(t => t.AssemblyName).ToDictionary(g => g.Key, g => g.ToList());
+        // distinct-by fully qualified name to account for partial types
+        allTypes[asmName] = sourceTypes.GroupBy(t => t.DisplayString).Select(g => g.First()).ToList(); // add the source-code collected types to the dictionary under the assembly name of the current compilation
 
         if (diagnostic != null)
             return diagnostic;
