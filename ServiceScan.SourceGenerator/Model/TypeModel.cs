@@ -69,20 +69,3 @@ sealed record TypeModel
         };
     }
 }
-
-internal sealed class TypeCache
-{
-    private readonly Dictionary<string, Lazy<TypeModel>> _cache = new();
-
-    public TypeModel GetOrAdd(string displayString, Func<string, TypeModel> factory)
-    {
-        return factory(displayString);
-
-        if (_cache.TryGetValue(displayString, out var typeModel))
-            return typeModel.Value;
-
-        typeModel = new Lazy<TypeModel>(() => factory(displayString));
-        _cache.Add(displayString, typeModel);
-        return typeModel.Value;
-    }
-}
