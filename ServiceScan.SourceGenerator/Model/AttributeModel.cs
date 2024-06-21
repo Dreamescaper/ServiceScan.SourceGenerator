@@ -14,7 +14,7 @@ record AttributeModel(
 {
     public bool HasSearchCriteria => TypeNameFilter != null || AssignableToType != null;
 
-    public static AttributeModel Create(AttributeData attribute)
+    public static AttributeModel Create(AttributeData attribute, TypeCache typeCache)
     {
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
@@ -25,7 +25,7 @@ record AttributeModel(
         if (string.IsNullOrWhiteSpace(typeNameFilter))
             typeNameFilter = null;
 
-        var assignableToTypeModel = assignableTo is not null ? TypeModel.Create(assignableTo) : null;
+        var assignableToTypeModel = assignableTo is not null ? TypeModel.Create(assignableTo, typeCache) : null;
 
         var lifetime = attribute.NamedArguments.FirstOrDefault(a => a.Key == "Lifetime").Value.Value as int? switch
         {

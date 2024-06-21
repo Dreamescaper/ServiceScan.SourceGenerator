@@ -43,12 +43,15 @@ sealed record TypeModel
         if (semanticModel.GetDeclaredSymbol(typeDeclaration, cancel) is not INamedTypeSymbol symbol)
             return null;
 
-        return Create(symbol);
+        return Create(symbol, new());
     }
 
-    public static TypeModel Create(INamedTypeSymbol symbol)
+    public static TypeModel Create(INamedTypeSymbol symbol, TypeCache cache)
     {
-        return new TypeModel
+        if (cache.TryGet(symbol, out var typeModel))
+            return typeModel;
+
+        typeModel = new TypeModel
         {
             AssemblyName = symbol.ContainingAssembly.Name,
             IsAbstract = symbol.IsAbstract,
@@ -61,11 +64,13 @@ sealed record TypeModel
             UnboundGenericDisplayString = symbol.IsGenericType
                 ? symbol.ConstructUnboundGenericType().ToDisplayString()
                 : symbol.ToDisplayString(),
-            AllInterfaces = new([.. symbol.AllInterfaces.Select(Create)]),
+            AllInterfaces = new([.. symbol.AllInterfaces.Select(t => Create(t, cache))]),
             OriginalDefinition = !symbol.IsGenericType
                 ? null
-                : symbol.IsUnboundGenericType ? null : Create(symbol.ConstructUnboundGenericType()),
-            BaseType = symbol.BaseType is not null ? Create(symbol.BaseType) : null,
+                : symbol.IsUnboundGenericType ? null : Create(symbol.ConstructUnboundGenericType(), cache),
+            BaseType = symbol.BaseType is not null ? Create(symbol.BaseType, cache) : null,
         };
+        cache.Add(symbol, typeModel);
+        return typeModel;
     }
 }

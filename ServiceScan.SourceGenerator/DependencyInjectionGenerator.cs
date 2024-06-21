@@ -24,8 +24,9 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             .Collect()
             .SelectMany(static (refs, ct) =>
             {
+                var cache = new TypeCache();
                 var comp = CSharpCompilation.Create("temp", references: refs);
-                return GetTypesFromNamespace(comp.GlobalNamespace).Select(TypeModel.Create);
+                return GetTypesFromNamespace(comp.GlobalNamespace).Select(t => TypeModel.Create(t, cache));
             })
             .Collect();
 
@@ -197,9 +198,10 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             return Diagnostic.Create(WrongMethodParameters, method.Locations[0]);
 
         var attributeData = new AttributeModel[context.Attributes.Length];
+        var typeCache = new TypeCache();
         for (var i = 0; i < context.Attributes.Length; i++)
         {
-            attributeData[i] = AttributeModel.Create(context.Attributes[i]);
+            attributeData[i] = AttributeModel.Create(context.Attributes[i], typeCache);
 
             if (!attributeData[i].HasSearchCriteria)
                 return Diagnostic.Create(MissingSearchCriteria, attributeData[i].Location);
