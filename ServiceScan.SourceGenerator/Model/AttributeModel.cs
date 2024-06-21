@@ -4,9 +4,7 @@ using Microsoft.CodeAnalysis;
 namespace ServiceScan.SourceGenerator.Model;
 
 record AttributeModel(
-    string? AssignableToTypeName,
-    EquatableArray<string>? AssignableToGenericArguments,
-    string? AssemblyOfTypeName,
+    TypeModel? AssignableToType,
     string Lifetime,
     string? TypeNameFilter,
     bool AsImplementedInterfaces,
@@ -14,7 +12,7 @@ record AttributeModel(
     Location Location,
     bool HasErrors)
 {
-    public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null;
+    public bool HasSearchCriteria => TypeNameFilter != null || AssignableToType != null;
 
     public static AttributeModel Create(AttributeData attribute)
     {
@@ -27,11 +25,7 @@ record AttributeModel(
         if (string.IsNullOrWhiteSpace(typeNameFilter))
             typeNameFilter = null;
 
-        var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
-        var assignableToTypeName = assignableTo?.ToFullMetadataName();
-        EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
-            ? new EquatableArray<string>([.. assignableTo?.TypeArguments.Select(t => t.ToFullMetadataName())])
-            : null;
+        var assignableToTypeModel = assignableTo is not null ? TypeModel.Create(assignableTo) : null;
 
         var lifetime = attribute.NamedArguments.FirstOrDefault(a => a.Key == "Lifetime").Value.Value as int? switch
         {
@@ -46,6 +40,6 @@ record AttributeModel(
 
         var hasError = assemblyType is { TypeKind: TypeKind.Error } || assignableTo is { TypeKind: TypeKind.Error };
 
-        return new(assignableToTypeName, assignableToGenericArguments, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, asSelf, location, hasError);
+        return new(assignableToTypeModel, lifetime, typeNameFilter, asImplementedInterfaces, asSelf, location, hasError);
     }
 }

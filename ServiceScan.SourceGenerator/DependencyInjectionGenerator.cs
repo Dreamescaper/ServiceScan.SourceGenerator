@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using ServiceScan.SourceGenerator.Model;
@@ -13,9 +15,33 @@ namespace ServiceScan.SourceGenerator;
 [Generator]
 public partial class DependencyInjectionGenerator : IIncrementalGenerator
 {
+    private sealed record AssemblyTypes(string AssemblyName, EquatableArray<TypeModel> Types);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(context => context.AddSource("GenerateServiceRegistrationsAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
+
+        // types from external assemblies
+        var refs = context.MetadataReferencesProvider
+            .Collect()
+            .SelectMany(static (refs, ct) =>
+            {
+                var comp = CSharpCompilation.Create("temp", references: refs);
+                var types = GetTypesFromNamespace(comp.GlobalNamespace).Select(TypeModel.Create).ToArray();
+                return types
+                    .GroupBy(t => t.AssemblyName)
+                    .Select(g => new AssemblyTypes(g.Key, new(g.ToArray())));
+            })
+            .Collect();
+
+        // types from source code
+        var typeProvider = context.SyntaxProvider.CreateSyntaxProvider(
+            (node, _) => node is TypeDeclarationSyntax,
+            (ctx, ct) => TypeModel.Create(ctx.Node, ctx.SemanticModel, ct))
+            .Where(x => x is not null)
+            .Collect();
+
+        var asmName = context.CompilationProvider.Select((c, _) => c.AssemblyName);
 
         var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName(
                 "ServiceScan.SourceGenerator.GenerateServiceRegistrationsAttribute",
@@ -23,8 +49,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 transform: static (context, ct) => ParseMethodModel(context))
             .Where(method => method != null);
 
-        var combinedProvider = methodProvider.Combine(context.CompilationProvider)
-            .WithComparer(CombinedProviderComparer.Instance);
+        var combinedProvider = methodProvider.Combine(refs.Combine(typeProvider).Combine(asmName));
 
         var methodImplementationsProvider = combinedProvider
             .Select(static (context, ct) => FindServicesToRegister(context));
@@ -80,10 +105,15 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             });
     }
 
-    private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, Compilation) context)
+    private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister(
+        (DiagnosticModel<MethodWithAttributesModel>, ((ImmutableArray<AssemblyTypes>, ImmutableArray<TypeModel>), string)) context)
     {
-        var (diagnosticModel, compilation) = context;
+        var (diagnosticModel, (combinedTypes, asmName)) = context;
         var diagnostic = diagnosticModel.Diagnostic;
+
+        var allTypes = combinedTypes.Item1.ToDictionary(x => x.AssemblyName, x => x.Types.ToList());
+        var sourceTypes = combinedTypes.Item2.GroupBy(t => t.DisplayString).Select(g => g.First()).ToList(); // distinct-by fully qualified name to account for partial types
+        allTypes[asmName] = sourceTypes; // add the source-code collected types to the dictionary under the assembly name of the current compilation
 
         if (diagnostic != null)
             return diagnostic;
@@ -96,36 +126,27 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         {
             bool typesFound = false;
 
-            var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? method.TypeMetadataName).ContainingAssembly;
+            if (!allTypes.TryGetValue(attribute.AssignableToType?.AssemblyName ?? asmName, out var asmTypes))
+                continue; // TODO raise diagnostic
 
-            var assignableToType = attribute.AssignableToTypeName is null
-                ? null
-                : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
-
-            if (assignableToType != null && attribute.AssignableToGenericArguments != null)
-            {
-                var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
-                assignableToType = assignableToType.Construct(typeArguments);
-            }
-
-            var types = GetTypesFromAssembly(assembly)
+            var types = asmTypes
                 .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
 
             if (attribute.TypeNameFilter != null)
             {
                 var regex = $"^({Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
-                types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
+                types = types.Where(t => Regex.IsMatch(t.DisplayString, regex));
             }
 
             foreach (var t in types)
             {
                 var implementationType = t;
 
-                INamedTypeSymbol matchedType = null;
-                if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
+                TypeModel matchedType = null;
+                if (attribute.AssignableToType != null && !IsAssignableTo(implementationType, attribute.AssignableToType, out matchedType))
                     continue;
 
-                IEnumerable<INamedTypeSymbol> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
+                IEnumerable<TypeModel> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
                 {
                     (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
                     (false, true) => implementationType.AllInterfaces,
@@ -137,18 +158,18 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 {
                     if (implementationType.IsGenericType)
                     {
-                        var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                        var implementationTypeName = implementationType.UnboundGenericDisplayString;
                         var serviceTypeName = serviceType.IsGenericType
-                            ? serviceType.ConstructUnboundGenericType().ToDisplayString()
-                            : serviceType.ToDisplayString();
+                            ? serviceType.UnboundGenericDisplayString
+                            : serviceType.DisplayString;
 
                         var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, false, true);
                         registrations.Add(registration);
                     }
                     else
                     {
-                        var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
-                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), shouldResolve, false);
+                        var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && implementationType != serviceType;
+                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.DisplayString, implementationType.DisplayString, shouldResolve, false);
                         registrations.Add(registration);
                     }
 
@@ -196,19 +217,19 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         return new MethodWithAttributesModel(model, new EquatableArray<AttributeModel>(attributeData));
     }
 
-    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol matchedType)
+    private static bool IsAssignableTo(TypeModel type, TypeModel assignableTo, out TypeModel matchedType)
     {
-        if (SymbolEqualityComparer.Default.Equals(type, assignableTo))
+        if (type == assignableTo)
         {
             matchedType = type;
             return true;
         }
 
-        if (assignableTo.IsGenericType && assignableTo.IsDefinition)
+        if (assignableTo.IsGenericType && assignableTo.IsUnboundGenericType)
         {
             if (assignableTo.TypeKind == TypeKind.Interface)
             {
-                var matchingInterface = type.AllInterfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, assignableTo));
+                var matchingInterface = type.AllInterfaces.FirstOrDefault(i => i.IsGenericType && i.OriginalDefinition == assignableTo);
                 matchedType = matchingInterface;
                 return matchingInterface != null;
             }
@@ -216,7 +237,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             var baseType = type.BaseType;
             while (baseType != null)
             {
-                if (baseType.IsGenericType && SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, assignableTo))
+                if (baseType.IsGenericType && baseType.OriginalDefinition == assignableTo)
                 {
                     matchedType = baseType;
                     return true;
@@ -230,13 +251,13 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             if (assignableTo.TypeKind == TypeKind.Interface)
             {
                 matchedType = assignableTo;
-                return type.AllInterfaces.Contains(assignableTo, SymbolEqualityComparer.Default);
+                return type.AllInterfaces.Contains(assignableTo);
             }
 
             var baseType = type.BaseType;
             while (baseType != null)
             {
-                if (SymbolEqualityComparer.Default.Equals(baseType, assignableTo))
+                if (baseType == assignableTo)
                 {
                     matchedType = baseType;
                     return true;
@@ -254,21 +275,21 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     {
         var @namespace = assemblySymbol.GlobalNamespace;
         return GetTypesFromNamespace(@namespace);
+    }
 
-        static IEnumerable<INamedTypeSymbol> GetTypesFromNamespace(INamespaceSymbol namespaceSymbol)
+    private static IEnumerable<INamedTypeSymbol> GetTypesFromNamespace(INamespaceSymbol namespaceSymbol)
+    {
+        foreach (var member in namespaceSymbol.GetMembers())
         {
-            foreach (var member in namespaceSymbol.GetMembers())
+            if (member is INamedTypeSymbol namedType)
             {
-                if (member is INamedTypeSymbol namedType)
+                yield return namedType;
+            }
+            else if (member is INamespaceSymbol nestedNamespace)
+            {
+                foreach (var type in GetTypesFromNamespace(nestedNamespace))
                 {
-                    yield return namedType;
-                }
-                else if (member is INamespaceSymbol nestedNamespace)
-                {
-                    foreach (var type in GetTypesFromNamespace(nestedNamespace))
-                    {
-                        yield return type;
-                    }
+                    yield return type;
                 }
             }
         }
