@@ -68,9 +68,9 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
                 {{method.TypeModifiers}} class {{method.TypeName}}
                 {
-                    {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection services)
+                    {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection {{method.ParameterName}})
                     {
-                        {{(method.ReturnsVoid ? "" : "return ")}}services
+                        {{(method.ReturnsVoid ? "" : "return ")}}{{method.ParameterName}}
                             {{sb.ToString().Trim()}};
                     }
                 }

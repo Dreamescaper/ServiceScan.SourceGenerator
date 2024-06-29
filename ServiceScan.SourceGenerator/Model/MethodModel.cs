@@ -10,11 +10,14 @@ record MethodModel(
     string TypeModifiers,
     string MethodName,
     string MethodModifiers,
+    string ParameterName,
     bool IsExtensionMethod,
     bool ReturnsVoid)
 {
     public static MethodModel Create(IMethodSymbol method, SyntaxNode syntax)
     {
+        var parameterName = method.Parameters[0].Name;
+
         return new MethodModel(
             Namespace: method.ContainingNamespace.IsGlobalNamespace ? null : method.ContainingNamespace.ToDisplayString(),
             TypeName: method.ContainingType.Name,
@@ -22,6 +25,7 @@ record MethodModel(
             TypeModifiers: GetModifiers(GetTypeSyntax(syntax)),
             MethodName: method.Name,
             MethodModifiers: GetModifiers(syntax),
+            ParameterName: parameterName,
             IsExtensionMethod: method.IsExtensionMethod,
             ReturnsVoid: method.ReturnsVoid);
     }
