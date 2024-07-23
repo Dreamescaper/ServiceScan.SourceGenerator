@@ -35,7 +35,10 @@ public static partial class ServicesExtensions
 }
 ```
 
-The only thing left is to invoke this method on your `IServiceCollection` instance.
+The only thing left is to invoke this method on your `IServiceCollection` instance
+```csharp
+services.AddServices();
+```
 
 ## Examples
 
@@ -59,13 +62,13 @@ public static IServiceCollection AddMediatR(this IServiceCollection services)
 [GenerateServiceRegistrations(AssignableTo = typeof(IRequestHandler<,>), Lifetime = ServiceLifetime.Transient)]
 private static partial IServiceCollection AddMediatRHandlers(this IServiceCollection services);
 ```
-It adds MediatR handlers, which would work for simple cases, although you might need to add other types like PipelineBehaviors or NotificationHandlers.
+It adds MediatR requests handlers, although you might need to add other types like PipelineBehaviors or NotificationHandlers.
 
 ### Add all repository types from your project based on name filter as their implemented interfaces:
 ```csharp
 [GenerateServiceRegistrations(
     TypeNameFilter = "*Repository",
-    AsImplemetedInterfaces = true,
+    AsImplementedInterfaces = true,
     Lifetime = ServiceLifetime.Scoped)]
 private static partial IServiceCollection AddRepositories(this IServiceCollection services);
 ```
