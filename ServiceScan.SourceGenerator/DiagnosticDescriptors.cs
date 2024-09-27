@@ -38,4 +38,11 @@ public static class DiagnosticDescriptors
         "Usage",
         DiagnosticSeverity.Warning,
         true);
+
+    public static readonly DiagnosticDescriptor KeySelectorMethodNotFound = new("DI0006",
+        "Provided KeySelector method is not found",
+        "KeySelector method should point to a static method in the class with an attribute",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
 }

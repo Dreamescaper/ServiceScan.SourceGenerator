@@ -9,6 +9,7 @@ record AttributeModel(
     string? AssemblyOfTypeName,
     string Lifetime,
     string? TypeNameFilter,
+    string? KeySelector,
     bool AsImplementedInterfaces,
     bool AsSelf,
     Location Location,
@@ -23,6 +24,7 @@ record AttributeModel(
         var asImplementedInterfaces = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsImplementedInterfaces").Value.Value is true;
         var asSelf = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsSelf").Value.Value is true;
         var typeNameFilter = attribute.NamedArguments.FirstOrDefault(a => a.Key == "TypeNameFilter").Value.Value as string;
+        var keySelector = attribute.NamedArguments.FirstOrDefault(a => a.Key == "KeySelector").Value.Value as string;
 
         if (string.IsNullOrWhiteSpace(typeNameFilter))
             typeNameFilter = null;
@@ -46,6 +48,15 @@ record AttributeModel(
 
         var hasError = assemblyType is { TypeKind: TypeKind.Error } || assignableTo is { TypeKind: TypeKind.Error };
 
-        return new(assignableToTypeName, assignableToGenericArguments, assemblyOfTypeName, lifetime, typeNameFilter, asImplementedInterfaces, asSelf, location, hasError);
+        return new(assignableToTypeName,
+            assignableToGenericArguments,
+            assemblyOfTypeName,
+            lifetime,
+            typeNameFilter,
+            keySelector,
+            asImplementedInterfaces,
+            asSelf,
+            location,
+            hasError);
     }
 }

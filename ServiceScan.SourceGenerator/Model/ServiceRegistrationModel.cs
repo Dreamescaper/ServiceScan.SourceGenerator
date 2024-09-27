@@ -5,4 +5,6 @@ record ServiceRegistrationModel(
     string ServiceTypeName,
     string ImplementationTypeName,
     bool ResolveImplementation,
-    bool IsOpenGeneric);
+    bool IsOpenGeneric,
+    string? KeySelectorMethodName,
+    bool? KeySelectorMethodGeneric);

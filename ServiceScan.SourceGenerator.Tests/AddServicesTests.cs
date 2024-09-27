@@ -463,6 +463,68 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddAsKeyedServices_GenericMethod()
+    {
+        var attribute = @"
+            private static string GetName<T>() => typeof(T).Name.Replace(""Service"", """");
+
+            [GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = nameof(GetName))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddKeyedTransient<GeneratorTests.IService, GeneratorTests.MyService1>(GetName<GeneratorTests.MyService1>())
+                .AddKeyedTransient<GeneratorTests.IService, GeneratorTests.MyService2>(GetName<GeneratorTests.MyService2>());
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void AddAsKeyedServices_MethodWithTypeParameter()
+    {
+        var attribute = @"
+            private static string GetName(Type type) => type.Name.Replace(""Service"", """");
+
+            [GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = nameof(GetName))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddKeyedTransient<GeneratorTests.IService, GeneratorTests.MyService1>(GetName(typeof(GeneratorTests.MyService1)))
+                .AddKeyedTransient<GeneratorTests.IService, GeneratorTests.MyService2>(GetName(typeof(GeneratorTests.MyService2)));
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void DontGenerateAnythingIfTypeIsInvalid()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IWrongService))]";

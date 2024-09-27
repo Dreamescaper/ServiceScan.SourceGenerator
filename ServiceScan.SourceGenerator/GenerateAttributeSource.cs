@@ -45,7 +45,7 @@ internal static class GenerateAttributeSource
             /// "forwarded" to "self" implementation.
             /// </summary>
             public bool AsSelf { get; set; }
-
+        
             /// <summary>
             /// Set this value to filter the types to register by their full name. 
             /// You can use '*' wildcards.
@@ -54,6 +54,14 @@ internal static class GenerateAttributeSource
             /// <example>Namespace.With.Services.*</example>
             /// <example>*Service,*Factory</example>
             public string? TypeNameFilter { get; set; }
+        
+            /// <summary>
+            /// Set this value to a static method returning string.
+            /// Returned value will be used as a key for the registration.
+            /// Method should either be generic, or have a single parameter of type <see cref="Type"/>.
+            /// </summary>
+            /// <example>nameof(GetKey)</example>
+            public string? KeySelector { get; set; }
         }
         """;
 }
