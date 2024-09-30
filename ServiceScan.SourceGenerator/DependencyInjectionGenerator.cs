@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -127,7 +128,17 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
             if (attribute.KeySelector != null && keySelectorMethod == null)
             {
-                return Diagnostic.Create(NoMatchingTypesFound, attribute.Location);
+                if (keySelectorMethod is null)
+                    return Diagnostic.Create(KeySelectorMethodNotFound, attribute.Location);
+
+                if (keySelectorMethod.ReturnsVoid)
+                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
+
+                var validGenericKeySelector = keySelectorMethod.TypeArguments.Length == 1 && keySelectorMethod.Parameters.Length == 0;
+                var validNonGenericKeySelector = !keySelectorMethod.IsGenericMethod && keySelectorMethod.Parameters is [{ Type.Name: nameof(Type) }];
+
+                if (!validGenericKeySelector && !validNonGenericKeySelector)
+                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
             }
 
             if (assignableToType != null && attribute.AssignableToGenericArguments != null)
