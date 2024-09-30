@@ -84,3 +84,4 @@ private static partial IServiceCollection AddRepositories(this IServiceCollectio
 | **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. |
 | **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case implemeted interfaces will be "forwarded" to an actual implementation type |
 | **TypeNameFilter** | Set this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
+| **KeySelector** | Set this value to a static method name returning string. Returned value will be used as a key for the registration. Method should either be generic, or have a single parameter of type `Type`. |

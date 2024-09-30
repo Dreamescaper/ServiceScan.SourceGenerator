@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -51,9 +52,23 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     else
                     {
                         if (registration.ResolveImplementation)
+                        {
                             sb.AppendLine($"            .Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())");
+                        }
                         else
-                            sb.AppendLine($"            .Add{registration.Lifetime}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>()");
+                        {
+                            var addMethod = registration.KeySelectorMethodName != null
+                                ? $"AddKeyed{registration.Lifetime}"
+                                : $"Add{registration.Lifetime}";
+
+                            var keyMethodInvocation = registration.KeySelectorMethodGeneric switch
+                            {
+                                true => $"{registration.KeySelectorMethodName}<{registration.ImplementationTypeName}>()",
+                                false => $"{registration.KeySelectorMethodName}(typeof({registration.ImplementationTypeName}))",
+                                null => null
+                            };
+                            sb.AppendLine($"            .{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keyMethodInvocation})");
+                        }
                     }
                 }
 
@@ -96,11 +111,35 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         {
             bool typesFound = false;
 
-            var assembly = compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName ?? method.TypeMetadataName).ContainingAssembly;
+            var containingType = compilation.GetTypeByMetadataName(method.TypeMetadataName);
+
+            var assembly = (attribute.AssemblyOfTypeName is null
+                ? containingType
+                : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName)).ContainingAssembly;
 
             var assignableToType = attribute.AssignableToTypeName is null
                 ? null
                 : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
+
+            var keySelectorMethod = attribute.KeySelector is null
+                ? null
+                : containingType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m =>
+                    m.IsStatic && m.Name == attribute.KeySelector);
+
+            if (attribute.KeySelector != null)
+            {
+                if (keySelectorMethod is null)
+                    return Diagnostic.Create(KeySelectorMethodNotFound, attribute.Location);
+
+                if (keySelectorMethod.ReturnsVoid)
+                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
+
+                var validGenericKeySelector = keySelectorMethod.TypeArguments.Length == 1 && keySelectorMethod.Parameters.Length == 0;
+                var validNonGenericKeySelector = !keySelectorMethod.IsGenericMethod && keySelectorMethod.Parameters is [{ Type.Name: nameof(Type) }];
+
+                if (!validGenericKeySelector && !validNonGenericKeySelector)
+                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
+            }
 
             if (assignableToType != null && attribute.AssignableToGenericArguments != null)
             {
@@ -142,13 +181,28 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                             ? serviceType.ConstructUnboundGenericType().ToDisplayString()
                             : serviceType.ToDisplayString();
 
-                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceTypeName, implementationTypeName, false, true);
+                        var registration = new ServiceRegistrationModel(
+                            attribute.Lifetime,
+                            serviceTypeName,
+                            implementationTypeName,
+                            false,
+                            true,
+                            keySelectorMethod?.Name,
+                            keySelectorMethod?.IsGenericMethod);
+
                         registrations.Add(registration);
                     }
                     else
                     {
                         var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
-                        var registration = new ServiceRegistrationModel(attribute.Lifetime, serviceType.ToDisplayString(), implementationType.ToDisplayString(), shouldResolve, false);
+                        var registration = new ServiceRegistrationModel(
+                            attribute.Lifetime,
+                            serviceType.ToDisplayString(),
+                            implementationType.ToDisplayString(),
+                            shouldResolve,
+                            false,
+                            keySelectorMethod?.Name,
+                            keySelectorMethod?.IsGenericMethod);
                         registrations.Add(registration);
                     }
 
