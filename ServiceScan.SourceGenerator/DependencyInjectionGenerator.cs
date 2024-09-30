@@ -126,7 +126,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 : containingType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m =>
                     m.IsStatic && m.Name == attribute.KeySelector);
 
-            if (attribute.KeySelector != null && keySelectorMethod == null)
+            if (attribute.KeySelector != null)
             {
                 if (keySelectorMethod is null)
                     return Diagnostic.Create(KeySelectorMethodNotFound, attribute.Location);

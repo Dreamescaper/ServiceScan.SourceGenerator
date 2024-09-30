@@ -201,4 +201,111 @@ public class DiagnosticTests
 
         Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingSearchCriteria);
     }
+
+    [Fact]
+    public void KeySelectorMethodDoesNotExist()
+    {
+        var attribute = @"
+            private static string GetName<T>() => typeof(T).Name.Replace(""Service"", """");
+
+            [GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = ""NoSuchMethodHere"")]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodNotFound);
+    }
+
+    [Fact]
+    public void KeySelectorMethod_GenericButHasParameters()
+    {
+        var attribute = @"
+            private static string GetName<T>(string name) => typeof(T).Name.Replace(""Service"", name);
+
+            [GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = nameof(GetName))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature);
+    }
+
+    [Fact]
+    public void KeySelectorMethod_NonGenericWithoutParameters()
+    {
+        var attribute = @"
+            private static string GetName() => ""const"";
+
+            [GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = nameof(GetName))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature);
+    }
+
+    [Fact]
+    public void KeySelectorMethod_Void()
+    {
+        var attribute = @"
+            private static void GetName(Type type)
+            {
+                type.Name.ToString();
+            }
+
+            [GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = nameof(GetName))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature);
+    }
 }
