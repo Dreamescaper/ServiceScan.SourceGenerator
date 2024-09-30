@@ -56,7 +56,7 @@ internal static class GenerateAttributeSource
             public string? TypeNameFilter { get; set; }
         
             /// <summary>
-            /// Set this value to a static method returning string.
+            /// Set this value to a static method name returning string.
             /// Returned value will be used as a key for the registration.
             /// Method should either be generic, or have a single parameter of type <see cref="Type"/>.
             /// </summary>
