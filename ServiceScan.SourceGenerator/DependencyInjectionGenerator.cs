@@ -12,12 +12,15 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterPostInitializationOutput(context => context.AddSource("GenerateServiceRegistrationsAttribute.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8)));
+        context.RegisterPostInitializationOutput(context =>
+        {
+            context.AddSource("ServiceScanAttributes.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8));
+        });
 
         var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName(
                 "ServiceScan.SourceGenerator.GenerateServiceRegistrationsAttribute",
                 predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax,
-                transform: static (context, ct) => ParseMethodModel(context))
+                transform: static (context, ct) => ParseRegisterMethodModel(context))
             .Where(method => method != null);
 
         var combinedProvider = methodProvider.Combine(context.CompilationProvider)
@@ -35,14 +38,16 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 if (src.Model == null)
                     return;
 
-                var (method, registrations) = src.Model;
-                string source = GenerateSource(method, registrations);
+                var (method, registrations, customHandling) = src.Model;
+                string source = customHandling.Count > 0
+                    ? GenerateCustomHandlingSource(method, customHandling)
+                    : GenerateRegistrationsSource(method, registrations);
 
                 context.AddSource($"{method.TypeName}_{method.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
             });
     }
 
-    private static string GenerateSource(MethodModel method, EquatableArray<ServiceRegistrationModel> registrations)
+    private static string GenerateRegistrationsSource(MethodModel method, EquatableArray<ServiceRegistrationModel> registrations)
     {
         var sb = new StringBuilder();
 
@@ -90,6 +95,35 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     {
                         {{(method.ReturnsVoid ? "" : "return ")}}{{method.ParameterName}}
                             {{sb.ToString().Trim()}};
+                    }
+                }
+                """;
+
+        return source;
+    }
+
+    private static string GenerateCustomHandlingSource(MethodModel method, EquatableArray<CustomHandlerModel> customHandlers)
+    {
+        var invocations = string.Join("\r\n", customHandlers.Select(h =>
+            $"        {h.HandlerMethodName}<{h.TypeName}>({string.Join(", ", method.Parameters.Select(p => p.Name))});"));
+
+        var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
+        var parameters = string.Join(",", method.Parameters.Select((p, i) =>
+            $"{(i == 0 && method.IsExtensionMethod ? "this" : "")} {p.Type} {p.Name}"));
+
+        var methodBody = $$"""
+                {{invocations.Trim()}}
+                {{(method.ReturnsVoid ? "" : $"return {method.ParameterName};")}}
+        """;
+
+        var source = $$"""
+                {{namespaceDeclaration}}
+
+                {{method.TypeModifiers}} class {{method.TypeName}}
+                {
+                    {{method.MethodModifiers}} {{method.ReturnType}} {{method.MethodName}}({{parameters}})
+                    {
+                        {{methodBody.Trim()}}
                     }
                 }
                 """;

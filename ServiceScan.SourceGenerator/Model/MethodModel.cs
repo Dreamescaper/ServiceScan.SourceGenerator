@@ -1,7 +1,10 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace ServiceScan.SourceGenerator.Model;
+
+record ParameterModel(string Type, string Name);
 
 record MethodModel(
     string Namespace,
@@ -10,36 +13,30 @@ record MethodModel(
     string TypeModifiers,
     string MethodName,
     string MethodModifiers,
-    string ParameterName,
+    EquatableArray<ParameterModel> Parameters,
     bool IsExtensionMethod,
-    bool ReturnsVoid)
+    bool ReturnsVoid,
+    string ReturnType)
 {
+    public string ParameterName => Parameters.Single().Name;
+
     public static MethodModel Create(IMethodSymbol method, SyntaxNode syntax)
     {
-        var parameterName = method.Parameters[0].Name;
+        EquatableArray<ParameterModel> parameters = [.. method.Parameters.Select(p => new ParameterModel(p.Type.ToDisplayString(), p.Name))];
+
+        var typeSyntax = syntax.FirstAncestorOrSelf<TypeDeclarationSyntax>();
 
         return new MethodModel(
             Namespace: method.ContainingNamespace.IsGlobalNamespace ? null : method.ContainingNamespace.ToDisplayString(),
             TypeName: method.ContainingType.Name,
             TypeMetadataName: method.ContainingType.ToFullMetadataName(),
-            TypeModifiers: GetModifiers(GetTypeSyntax(syntax)),
+            TypeModifiers: GetModifiers(typeSyntax),
             MethodName: method.Name,
             MethodModifiers: GetModifiers(syntax),
-            ParameterName: parameterName,
+            Parameters: parameters,
             IsExtensionMethod: method.IsExtensionMethod,
-            ReturnsVoid: method.ReturnsVoid);
-    }
-
-    private static TypeDeclarationSyntax GetTypeSyntax(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is TypeDeclarationSyntax t)
-                return t;
-            parent = parent.Parent;
-        }
-        return null;
+            ReturnsVoid: method.ReturnsVoid,
+            ReturnType: method.ReturnType.ToDisplayString());
     }
 
     private static string GetModifiers(SyntaxNode syntax)

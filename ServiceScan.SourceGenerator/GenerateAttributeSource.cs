@@ -41,7 +41,7 @@ internal static class GenerateAttributeSource
         
             /// <summary>
             /// If set to true, types will be registered with their actual type.
-            /// It can be combined with <see cref="AsImplementedInterfaces"/>, in that case implemeted interfaces will be
+            /// It can be combined with <see cref="AsImplementedInterfaces"/>, in that case implemented interfaces will be
             /// "forwarded" to "self" implementation.
             /// </summary>
             public bool AsSelf { get; set; }
@@ -56,12 +56,20 @@ internal static class GenerateAttributeSource
             public string? TypeNameFilter { get; set; }
         
             /// <summary>
-            /// Set this value to a static method name returning string.
+            /// Set this property to a static method name returning string.
             /// Returned value will be used as a key for the registration.
             /// Method should either be generic, or have a single parameter of type <see cref="Type"/>.
             /// </summary>
             /// <example>nameof(GetKey)</example>
             public string? KeySelector { get; set; }
+        
+            /// <summary>
+            /// Set this property to a static generic method name in the current class.
+            /// This method will be invoked for each type found by the filter.
+            /// This property is incompatible with <see cref="Lifetime"/>, <see cref="AsImplementedInterfaces"/>, <see cref="AsSelf"/>,
+            /// <see cref="KeySelector"/>  properties.
+            /// </summary>
+            public string? CustomHandler { get; set; }
         }
         """;
 }
