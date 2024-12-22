@@ -52,19 +52,17 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
     private static string GenerateRegistrationsSource(MethodModel method, EquatableArray<ServiceRegistrationModel> registrations)
     {
-        var sb = new StringBuilder();
-
-        foreach (var registration in registrations)
+        var registrationsCode = string.Join("\n", registrations.Select(registration =>
         {
             if (registration.IsOpenGeneric)
             {
-                sb.AppendLine($"            .Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))");
+                return $"            .Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))";
             }
             else
             {
                 if (registration.ResolveImplementation)
                 {
-                    sb.AppendLine($"            .Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())");
+                    return $"            .Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())";
                 }
                 else
                 {
@@ -78,10 +76,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                         false => $"{registration.KeySelectorMethodName}(typeof({registration.ImplementationTypeName}))",
                         null => null
                     };
-                    sb.AppendLine($"            .{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keyMethodInvocation})");
+
+                    return $"            .{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keyMethodInvocation})";
                 }
             }
-        }
+        }));
 
         var returnType = method.ReturnsVoid ? "void" : "IServiceCollection";
 
@@ -97,7 +96,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection {{method.ParameterName}})
                     {
                         {{(method.ReturnsVoid ? "" : "return ")}}{{method.ParameterName}}
-                            {{sb.ToString().Trim()}};
+                            {{registrationsCode.Trim()}};
                     }
                 }
                 """;
@@ -107,7 +106,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
     private static string GenerateCustomHandlingSource(MethodModel method, EquatableArray<CustomHandlerModel> customHandlers)
     {
-        var invocations = string.Join("\r\n", customHandlers.Select(h =>
+        var invocations = string.Join("\n", customHandlers.Select(h =>
             $"        {h.HandlerMethodName}<{h.TypeName}>({string.Join(", ", method.Parameters.Select(p => p.Name))});"));
 
         var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
