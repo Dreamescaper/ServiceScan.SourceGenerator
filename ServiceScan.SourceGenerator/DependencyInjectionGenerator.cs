@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using ServiceScan.SourceGenerator.Extensions;
 using ServiceScan.SourceGenerator.Model;
 
 namespace ServiceScan.SourceGenerator;
@@ -42,6 +43,8 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 string source = customHandling.Count > 0
                     ? GenerateCustomHandlingSource(method, customHandling)
                     : GenerateRegistrationsSource(method, registrations);
+
+                source = source.ReplaceLineEndings();
 
                 context.AddSource($"{method.TypeName}_{method.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
             });
