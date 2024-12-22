@@ -2,4 +2,5 @@
 
 record MethodImplementationModel(
     MethodModel Method,
-    EquatableArray<ServiceRegistrationModel> Registrations);
+    EquatableArray<ServiceRegistrationModel> Registrations,
+    EquatableArray<CustomHandlerModel?> CustomHandlers);

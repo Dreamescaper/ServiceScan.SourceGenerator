@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace ServiceScan.SourceGenerator;
 
@@ -9,6 +10,7 @@ namespace ServiceScan.SourceGenerator;
 /// Creates a new <see cref="EquatableArray{T}"/> instance.
 /// </summary>
 /// <param name="array">The input <see cref="ImmutableArray"/> to wrap.</param>
+[CollectionBuilder(typeof(EquatableArrayBuilder), nameof(EquatableArrayBuilder.Create))]
 internal readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArray<T>>, IEnumerable<T> where T : IEquatable<T>
 {
     public static readonly EquatableArray<T> Empty = new([]);
@@ -80,4 +82,9 @@ internal readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArra
     {
         return !left.Equals(right);
     }
+}
+
+file static class EquatableArrayBuilder
+{
+    public static EquatableArray<T> Create<T>(ReadOnlySpan<T> values) where T : IEquatable<T> => new(values.ToArray());
 }

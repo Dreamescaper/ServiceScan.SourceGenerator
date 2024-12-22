@@ -73,6 +73,37 @@ It adds MediatR requests handlers, although you might need to add other types li
 private static partial IServiceCollection AddRepositories(this IServiceCollection services);
 ```
 
+### Add AspNetCore Minimal API endpoints
+You can add custom type handler, if you need to do something non-trivial with that type. For example, you can automatically discover
+and map Minimal API endpoints:
+```csharp
+public interface IEndpoint
+{
+    abstract static void MapEndpoint(IEndpointRouteBuilder endpoints);
+}
+
+public class HelloWorldEndpoint : IEndpoint
+{
+    public static void MapEndpoint(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGet("/", () => "Hello World!");
+    }
+}
+
+public static partial class ServiceCollectionExtensions
+{
+    [GenerateServiceRegistrations(AssignableTo = typeof(IEndpoint), CustomHandler = nameof(MapEndpoint))]
+    public static partial IEndpointRouteBuilder MapEndpoints(this IEndpointRouteBuilder endpoints);
+
+    private static void MapEndpoint<T>(IEndpointRouteBuilder endpoints) where T : IEndpoint
+    {
+        T.MapEndpoint(endpoints);
+    }
+}
+
+```
+
+
 ## Parameters
 
 `GenerateServiceRegistrations` attribute has the following properties:
@@ -82,6 +113,7 @@ private static partial IServiceCollection AddRepositories(this IServiceCollectio
 | **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type, unless `AsImplementedInterfaces` or `AsSelf` is set. |
 | **Lifetime** | Set the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
 | **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. |
-| **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case implemeted interfaces will be "forwarded" to an actual implementation type |
+| **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case implemented interfaces will be "forwarded" to an actual implementation type |
 | **TypeNameFilter** | Set this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
 | **KeySelector** | Set this value to a static method name returning string. Returned value will be used as a key for the registration. Method should either be generic, or have a single parameter of type `Type`. |
+| **CustomHandler** | Set this property to a static generic method name in the current class. Set this property to a static generic method name in the current class. This property is incompatible with 'Lifetime', 'AsImplementedInterfaces', 'AsSelf', 'KeySelector' properties. |

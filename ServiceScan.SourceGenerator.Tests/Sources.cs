@@ -2,10 +2,6 @@
 
 public static class Sources
 {
-    public const string Services = """
-
-        """;
-
     public static string MethodWithAttribute(string attribute)
     {
         attribute = attribute.Replace("\n", "\n    ");

@@ -8,3 +8,7 @@ record ServiceRegistrationModel(
     bool IsOpenGeneric,
     string? KeySelectorMethodName,
     bool? KeySelectorMethodGeneric);
+
+record CustomHandlerModel(
+    string HandlerMethodName,
+    string TypeName);

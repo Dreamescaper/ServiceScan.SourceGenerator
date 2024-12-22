@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using ServiceScan.SourceGenerator.Model;
 using static ServiceScan.SourceGenerator.DiagnosticDescriptors;
@@ -21,6 +19,7 @@ public partial class DependencyInjectionGenerator
         var (method, attributes) = diagnosticModel.Model;
 
         var registrations = new List<ServiceRegistrationModel>();
+        var customHandlers = new List<CustomHandlerModel>();
 
         foreach (var attribute in attributes)
         {
@@ -28,100 +27,59 @@ public partial class DependencyInjectionGenerator
 
             var containingType = compilation.GetTypeByMetadataName(method.TypeMetadataName);
 
-            var assembly = (attribute.AssemblyOfTypeName is null
-                ? containingType
-                : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName)).ContainingAssembly;
-
-            var assignableToType = attribute.AssignableToTypeName is null
-                ? null
-                : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
-
-            var keySelectorMethod = attribute.KeySelector is null
-                ? null
-                : containingType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m =>
-                    m.IsStatic && m.Name == attribute.KeySelector);
-
-            if (attribute.KeySelector != null)
+            foreach (var (implementationType, matchedType) in FilterTypes(compilation, attribute, containingType))
             {
-                if (keySelectorMethod is null)
-                    return Diagnostic.Create(KeySelectorMethodNotFound, attribute.Location);
+                typesFound = true;
 
-                if (keySelectorMethod.ReturnsVoid)
-                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
-
-                var validGenericKeySelector = keySelectorMethod.TypeArguments.Length == 1 && keySelectorMethod.Parameters.Length == 0;
-                var validNonGenericKeySelector = !keySelectorMethod.IsGenericMethod && keySelectorMethod.Parameters is [{ Type.Name: nameof(Type) }];
-
-                if (!validGenericKeySelector && !validNonGenericKeySelector)
-                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
-            }
-
-            if (assignableToType != null && attribute.AssignableToGenericArguments != null)
-            {
-                var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
-                assignableToType = assignableToType.Construct(typeArguments);
-            }
-
-            var types = GetTypesFromAssembly(assembly)
-                .Where(t => !t.IsAbstract && !t.IsStatic && t.CanBeReferencedByName && t.TypeKind == TypeKind.Class);
-
-            if (attribute.TypeNameFilter != null)
-            {
-                var regex = $"^({Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
-                types = types.Where(t => Regex.IsMatch(t.ToDisplayString(), regex));
-            }
-
-            foreach (var t in types)
-            {
-                var implementationType = t;
-
-                INamedTypeSymbol matchedType = null;
-                if (assignableToType != null && !IsAssignableTo(implementationType, assignableToType, out matchedType))
-                    continue;
-
-                IEnumerable<INamedTypeSymbol> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
+                if (attribute.CustomHandler != null)
                 {
-                    (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
-                    (false, true) => implementationType.AllInterfaces,
-                    (true, false) => [implementationType],
-                    _ => [matchedType ?? implementationType]
-                };
-
-                foreach (var serviceType in serviceTypes)
+                    customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, implementationType.ToDisplayString()));
+                }
+                else
                 {
-                    if (implementationType.IsGenericType)
+                    IEnumerable<INamedTypeSymbol> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
                     {
-                        var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
-                        var serviceTypeName = serviceType.IsGenericType
-                            ? serviceType.ConstructUnboundGenericType().ToDisplayString()
-                            : serviceType.ToDisplayString();
+                        (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
+                        (false, true) => implementationType.AllInterfaces,
+                        (true, false) => [implementationType],
+                        _ => [matchedType ?? implementationType]
+                    };
 
-                        var registration = new ServiceRegistrationModel(
-                            attribute.Lifetime,
-                            serviceTypeName,
-                            implementationTypeName,
-                            false,
-                            true,
-                            keySelectorMethod?.Name,
-                            keySelectorMethod?.IsGenericMethod);
-
-                        registrations.Add(registration);
-                    }
-                    else
+                    foreach (var serviceType in serviceTypes)
                     {
-                        var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
-                        var registration = new ServiceRegistrationModel(
-                            attribute.Lifetime,
-                            serviceType.ToDisplayString(),
-                            implementationType.ToDisplayString(),
-                            shouldResolve,
-                            false,
-                            keySelectorMethod?.Name,
-                            keySelectorMethod?.IsGenericMethod);
-                        registrations.Add(registration);
-                    }
+                        if (implementationType.IsGenericType)
+                        {
+                            var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                            var serviceTypeName = serviceType.IsGenericType
+                                ? serviceType.ConstructUnboundGenericType().ToDisplayString()
+                                : serviceType.ToDisplayString();
 
-                    typesFound = true;
+                            var registration = new ServiceRegistrationModel(
+                                attribute.Lifetime,
+                                serviceTypeName,
+                                implementationTypeName,
+                                false,
+                                true,
+                                attribute.KeySelector,
+                                attribute.KeySelectorGeneric);
+
+                            registrations.Add(registration);
+                        }
+                        else
+                        {
+                            var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
+                            var registration = new ServiceRegistrationModel(
+                                attribute.Lifetime,
+                                serviceType.ToDisplayString(),
+                                implementationType.ToDisplayString(),
+                                shouldResolve,
+                                false,
+                                attribute.KeySelector,
+                                attribute.KeySelectorGeneric);
+
+                            registrations.Add(registration);
+                        }
+                    }
                 }
             }
 
@@ -129,85 +87,7 @@ public partial class DependencyInjectionGenerator
                 diagnostic ??= Diagnostic.Create(NoMatchingTypesFound, attribute.Location);
         }
 
-        var implementationModel = new MethodImplementationModel(method, new EquatableArray<ServiceRegistrationModel>([.. registrations]));
+        var implementationModel = new MethodImplementationModel(method, [.. registrations], [.. customHandlers]);
         return new(diagnostic, implementationModel);
-    }
-
-    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol matchedType)
-    {
-        if (SymbolEqualityComparer.Default.Equals(type, assignableTo))
-        {
-            matchedType = type;
-            return true;
-        }
-
-        if (assignableTo.IsGenericType && assignableTo.IsDefinition)
-        {
-            if (assignableTo.TypeKind == TypeKind.Interface)
-            {
-                var matchingInterface = type.AllInterfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, assignableTo));
-                matchedType = matchingInterface;
-                return matchingInterface != null;
-            }
-
-            var baseType = type.BaseType;
-            while (baseType != null)
-            {
-                if (baseType.IsGenericType && SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, assignableTo))
-                {
-                    matchedType = baseType;
-                    return true;
-                }
-
-                baseType = baseType.BaseType;
-            }
-        }
-        else
-        {
-            if (assignableTo.TypeKind == TypeKind.Interface)
-            {
-                matchedType = assignableTo;
-                return type.AllInterfaces.Contains(assignableTo, SymbolEqualityComparer.Default);
-            }
-
-            var baseType = type.BaseType;
-            while (baseType != null)
-            {
-                if (SymbolEqualityComparer.Default.Equals(baseType, assignableTo))
-                {
-                    matchedType = baseType;
-                    return true;
-                }
-
-                baseType = baseType.BaseType;
-            }
-        }
-
-        matchedType = null;
-        return false;
-    }
-
-    private static IEnumerable<INamedTypeSymbol> GetTypesFromAssembly(IAssemblySymbol assemblySymbol)
-    {
-        var @namespace = assemblySymbol.GlobalNamespace;
-        return GetTypesFromNamespace(@namespace);
-
-        static IEnumerable<INamedTypeSymbol> GetTypesFromNamespace(INamespaceSymbol namespaceSymbol)
-        {
-            foreach (var member in namespaceSymbol.GetMembers())
-            {
-                if (member is INamedTypeSymbol namedType)
-                {
-                    yield return namedType;
-                }
-                else if (member is INamespaceSymbol nestedNamespace)
-                {
-                    foreach (var type in GetTypesFromNamespace(nestedNamespace))
-                    {
-                        yield return type;
-                    }
-                }
-            }
-        }
     }
 }

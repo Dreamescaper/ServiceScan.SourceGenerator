@@ -52,4 +52,32 @@ public static class DiagnosticDescriptors
         "Usage",
         DiagnosticSeverity.Error,
         true);
+
+    public static readonly DiagnosticDescriptor OnlyOneCustomHandlerAllowed = new("DI0008",
+        "Only one GenerateServiceRegistrations attribute is allowed when CustomHandler used",
+        "Only one GenerateServiceRegistrations attribute is allowed when CustomHandler used",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
+
+    public static readonly DiagnosticDescriptor WrongReturnTypeForCustomHandler = new("DI0009",
+        "Wrong return type",
+        "Method with CustomHandler must return void or 'this' parameter type",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
+
+    public static readonly DiagnosticDescriptor CustomHandlerMethodNotFound = new("DI0012",
+        "Provided CustomHandler method is not found",
+        "CustomHandler parameter should point to a static method in the class",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
+
+    public static readonly DiagnosticDescriptor CustomHandlerMethodHasIncorrectSignature = new("DI0011",
+        "Provided CustomHandler method has incorrect signature",
+        "CustomHandler method must be generic, and must have the same parameters as the method with an attribute",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
 }
