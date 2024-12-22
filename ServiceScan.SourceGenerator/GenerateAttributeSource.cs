@@ -65,9 +65,9 @@ internal static class GenerateAttributeSource
         
             /// <summary>
             /// Set this property to a static generic method name in the current class.
-            /// This method will be invoked for each type found by the filter.
+            /// This method will be invoked for each type found by the filter instead of regular registration logic.
             /// This property is incompatible with <see cref="Lifetime"/>, <see cref="AsImplementedInterfaces"/>, <see cref="AsSelf"/>,
-            /// <see cref="KeySelector"/>  properties.
+            /// <see cref="KeySelector"/> properties.
             /// </summary>
             public string? CustomHandler { get; set; }
         }
