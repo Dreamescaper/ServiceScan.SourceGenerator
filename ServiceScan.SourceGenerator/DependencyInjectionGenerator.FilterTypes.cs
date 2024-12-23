@@ -104,19 +104,20 @@ public partial class DependencyInjectionGenerator
     private static IEnumerable<INamedTypeSymbol> GetTypesFromAssembly(IAssemblySymbol assemblySymbol)
     {
         var @namespace = assemblySymbol.GlobalNamespace;
-        return GetTypesFromNamespace(@namespace);
+        return GetTypesFromNamespaceOrType(@namespace);
 
-        static IEnumerable<INamedTypeSymbol> GetTypesFromNamespace(INamespaceSymbol namespaceSymbol)
+        static IEnumerable<INamedTypeSymbol> GetTypesFromNamespaceOrType(INamespaceOrTypeSymbol symbol)
         {
-            foreach (var member in namespaceSymbol.GetMembers())
+            foreach (var member in symbol.GetMembers())
             {
-                if (member is INamedTypeSymbol namedType)
+                if (member is INamespaceOrTypeSymbol namespaceOrType)
                 {
-                    yield return namedType;
-                }
-                else if (member is INamespaceSymbol nestedNamespace)
-                {
-                    foreach (var type in GetTypesFromNamespace(nestedNamespace))
+                    if (member is INamedTypeSymbol namedType)
+                    {
+                        yield return namedType;
+                    }
+
+                    foreach (var type in GetTypesFromNamespaceOrType(namespaceOrType))
                     {
                         yield return type;
                     }
