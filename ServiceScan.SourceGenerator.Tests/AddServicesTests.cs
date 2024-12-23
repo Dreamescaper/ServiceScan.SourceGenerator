@@ -463,6 +463,42 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddNestedTypes()
+    {
+        var attribute = "[GenerateServiceRegistrations(AssignableTo = typeof(IService))]";
+        var compilation = CreateCompilation(Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            
+            public class ParentType1
+            {
+                public class MyService1 : IService { }
+                public class MyService2 : IService { }
+            }
+            
+            public class ParentType2
+            {
+                public class MyService1 : IService { }
+            }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<GeneratorTests.IService, GeneratorTests.ParentType1.MyService1>()
+                .AddTransient<GeneratorTests.IService, GeneratorTests.ParentType1.MyService2>()
+                .AddTransient<GeneratorTests.IService, GeneratorTests.ParentType2.MyService1>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddAsKeyedServices_GenericMethod()
     {
         var attribute = @"
