@@ -100,7 +100,36 @@ public static partial class ServiceCollectionExtensions
         T.MapEndpoint(endpoints);
     }
 }
+```
 
+### Register Options types
+Another example of `CustomHandler` is to register Options types. We can define custom `OptionAttribute`, which allows to specify configuration section key.
+And then read that value in our `CustomHandler`:
+```csharp
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+public class OptionAttribute(string? section = null) : Attribute
+{
+    public string? Section { get; } = section;
+}
+
+[Option]
+public record RootSection { }
+
+[Option("SectionOption")]
+public record SectionOption { }
+
+public static partial class ServiceCollectionExtensions
+{
+    [GenerateServiceRegistrations(AttributeFilter = typeof(OptionAttribute), CustomHandler = nameof(AddOption))]
+    public static partial IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration);
+
+    private static void AddOption<T>(IServiceCollection services, IConfiguration configuration) where T : class
+    {
+        var sectionKey = typeof(T).GetCustomAttribute<OptionAttribute>()?.Section;
+        var section = sectionKey is null ? configuration : configuration.GetSection(sectionKey);
+        services.Configure<T>(section);
+    }
+}
 ```
 
 
