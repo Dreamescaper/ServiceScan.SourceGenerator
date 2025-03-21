@@ -20,6 +20,10 @@ public partial class DependencyInjectionGenerator
             ? null
             : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
 
+        var withAttributeType = attribute.WithAttributeTypeName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.WithAttributeTypeName);
+
         if (assignableToType != null && attribute.AssignableToGenericArguments != null)
         {
             var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
@@ -30,6 +34,12 @@ public partial class DependencyInjectionGenerator
         {
             if (type.IsAbstract || type.IsStatic || !type.CanBeReferencedByName || type.TypeKind != TypeKind.Class)
                 continue;
+
+            if (withAttributeType != null)
+            {
+                if (!type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, withAttributeType)))
+                    continue;
+            }
 
             if (attribute.TypeNameFilter != null)
             {
