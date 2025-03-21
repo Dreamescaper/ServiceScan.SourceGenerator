@@ -7,6 +7,7 @@ record AttributeModel(
     string? AssignableToTypeName,
     EquatableArray<string>? AssignableToGenericArguments,
     string? AssemblyOfTypeName,
+    string? WithAttributeTypeName,
     string Lifetime,
     string? TypeNameFilter,
     string? KeySelector,
@@ -17,12 +18,13 @@ record AttributeModel(
     Location Location,
     bool HasErrors)
 {
-    public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null;
+    public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null || WithAttributeTypeName != null;
 
     public static AttributeModel Create(AttributeData attribute, IMethodSymbol method)
     {
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
+        var withAttributeType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "WithAttribute").Value.Value as INamedTypeSymbol;
         var asImplementedInterfaces = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsImplementedInterfaces").Value.Value is true;
         var asSelf = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsSelf").Value.Value is true;
         var typeNameFilter = attribute.NamedArguments.FirstOrDefault(a => a.Key == "TypeNameFilter").Value.Value as string;
@@ -45,6 +47,7 @@ record AttributeModel(
         if (string.IsNullOrWhiteSpace(typeNameFilter))
             typeNameFilter = null;
 
+        var withAttributeTypeName = withAttributeType?.ToFullMetadataName();
         var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
         var assignableToTypeName = assignableTo?.ToFullMetadataName();
         EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
@@ -62,12 +65,15 @@ record AttributeModel(
         var textSpan = attribute.ApplicationSyntaxReference.Span;
         var location = Location.Create(syntax, textSpan);
 
-        var hasError = assemblyType is { TypeKind: TypeKind.Error } || assignableTo is { TypeKind: TypeKind.Error };
+        var hasError = assemblyType is { TypeKind: TypeKind.Error }
+            || assignableTo is { TypeKind: TypeKind.Error }
+            || withAttributeType is { TypeKind: TypeKind.Error };
 
         return new(
             assignableToTypeName,
             assignableToGenericArguments,
             assemblyOfTypeName,
+            withAttributeTypeName,
             lifetime,
             typeNameFilter,
             keySelector,

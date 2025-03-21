@@ -20,13 +20,18 @@ internal static class GenerateAttributeSource
             /// If not specified, the assembly containing the method with this attribute will be used.
             /// </summary>
             public Type? FromAssemblyOf { get; set; }
-
+        
             /// <summary>
             /// Set the type that the registered types must be assignable to.
             /// Types will be registered with this type as the service type,
             /// unless <see cref="AsImplementedInterfaces"/> or <see cref="AsSelf"/> is set.
             /// </summary>
             public Type? AssignableTo { get; set; }
+        
+            /// <summary>
+            /// Filter types by specified attribute type present.
+            /// </summary>
+            public Type? WithAttribute { get; set; }
 
             /// <summary>
             /// Set the lifetime of the registered services.
