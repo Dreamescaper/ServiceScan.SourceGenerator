@@ -61,7 +61,7 @@ public partial class DependencyInjectionGenerator
                                 false,
                                 true,
                                 attribute.KeySelector,
-                                attribute.KeySelectorGeneric);
+                                attribute.KeySelectorType);
 
                             registrations.Add(registration);
                         }
@@ -75,7 +75,7 @@ public partial class DependencyInjectionGenerator
                                 shouldResolve,
                                 false,
                                 attribute.KeySelector,
-                                attribute.KeySelectorGeneric);
+                                attribute.KeySelectorType);
 
                             registrations.Add(registration);
                         }

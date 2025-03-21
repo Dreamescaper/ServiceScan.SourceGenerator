@@ -66,18 +66,19 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 }
                 else
                 {
-                    var addMethod = registration.KeySelectorMethodName != null
+                    var addMethod = registration.KeySelector != null
                         ? $"AddKeyed{registration.Lifetime}"
                         : $"Add{registration.Lifetime}";
 
-                    var keyMethodInvocation = registration.KeySelectorMethodGeneric switch
+                    var keySelectorInvocation = registration.KeySelectorType switch
                     {
-                        true => $"{registration.KeySelectorMethodName}<{registration.ImplementationTypeName}>()",
-                        false => $"{registration.KeySelectorMethodName}(typeof({registration.ImplementationTypeName}))",
-                        null => null
+                        KeySelectorType.GenericMethod => $"{registration.KeySelector}<{registration.ImplementationTypeName}>()",
+                        KeySelectorType.Method => $"{registration.KeySelector}(typeof({registration.ImplementationTypeName}))",
+                        KeySelectorType.TypeMember => $"{registration.ImplementationTypeName}.{registration.KeySelector}",
+                        _ => null
                     };
 
-                    return $"            .{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keyMethodInvocation})";
+                    return $"            .{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keySelectorInvocation})";
                 }
             }
         }));

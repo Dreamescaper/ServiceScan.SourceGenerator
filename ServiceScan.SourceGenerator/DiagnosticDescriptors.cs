@@ -39,13 +39,6 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Warning,
         true);
 
-    public static readonly DiagnosticDescriptor KeySelectorMethodNotFound = new("DI0006",
-        "Provided KeySelector method is not found",
-        "KeySelector parameter should point to a static method in the class",
-        "Usage",
-        DiagnosticSeverity.Error,
-        true);
-
     public static readonly DiagnosticDescriptor KeySelectorMethodHasIncorrectSignature = new("DI0007",
         "Provided KeySelector method has incorrect signature",
         "KeySelector should have non-void return type, and either be generic with no parameters, or non-generic with a single Type parameter",

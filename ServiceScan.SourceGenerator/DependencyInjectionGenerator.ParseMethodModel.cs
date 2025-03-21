@@ -35,17 +35,17 @@ public partial class DependencyInjectionGenerator
                 var keySelectorMethod = method.ContainingType.GetMembers().OfType<IMethodSymbol>()
                     .FirstOrDefault(m => m.IsStatic && m.Name == attribute.KeySelector);
 
-                if (keySelectorMethod is null)
-                    return Diagnostic.Create(KeySelectorMethodNotFound, attribute.Location);
+                if (keySelectorMethod is not null)
+                {
+                    if (keySelectorMethod.ReturnsVoid)
+                        return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
 
-                if (keySelectorMethod.ReturnsVoid)
-                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
+                    var validGenericKeySelector = keySelectorMethod.TypeArguments.Length == 1 && keySelectorMethod.Parameters.Length == 0;
+                    var validNonGenericKeySelector = !keySelectorMethod.IsGenericMethod && keySelectorMethod.Parameters is [{ Type.Name: nameof(Type) }];
 
-                var validGenericKeySelector = keySelectorMethod.TypeArguments.Length == 1 && keySelectorMethod.Parameters.Length == 0;
-                var validNonGenericKeySelector = !keySelectorMethod.IsGenericMethod && keySelectorMethod.Parameters is [{ Type.Name: nameof(Type) }];
-
-                if (!validGenericKeySelector && !validNonGenericKeySelector)
-                    return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
+                    if (!validGenericKeySelector && !validNonGenericKeySelector)
+                        return Diagnostic.Create(KeySelectorMethodHasIncorrectSignature, attribute.Location);
+                }
             }
 
             if (attribute.CustomHandler != null)
