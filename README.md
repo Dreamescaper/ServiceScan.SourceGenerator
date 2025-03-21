@@ -104,7 +104,7 @@ public static partial class ServiceCollectionExtensions
 
 ### Register Options types
 Another example of `CustomHandler` is to register Options types. We can define custom `OptionAttribute`, which allows to specify configuration section key.
-And than read that value in out `CustomHandler`:
+And then read that value in our `CustomHandler`:
 ```csharp
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public class OptionAttribute(string? section = null) : Attribute
