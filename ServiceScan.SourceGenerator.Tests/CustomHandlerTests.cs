@@ -159,6 +159,64 @@ public class CustomHandlerTests
         Assert.Equal(expected, results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void CustomHandlerWithParametersAndAttributeFilter()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(WithAttribute = typeof(ServiceAttribute), CustomHandler = nameof(HandleType))]
+                public static partial IServiceCollection ProcessServices(this IServiceCollection services, decimal number);
+
+                private static void HandleType<T>(IServiceCollection services, decimal number) => System.Console.WriteLine(number.ToString() + typeof(T).Name);
+            }
+            """;
+
+        var services =
+            """
+            using System;
+
+            namespace GeneratorTests;
+            
+            [AttributeUsage(AttributeTargets.Class)]
+            public sealed class ServiceAttribute : Attribute;
+            
+            [Service]
+            public class MyFirstService {}
+            
+            [Service]
+            public class MySecondService {}
+            
+            public class ServiceWithoutAttribute {}
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial IServiceCollection ProcessServices(this IServiceCollection services, decimal number)
+                {
+                    HandleType<GeneratorTests.MyFirstService>(services, number);
+                    HandleType<GeneratorTests.MySecondService>(services, number);
+                    return services;
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;

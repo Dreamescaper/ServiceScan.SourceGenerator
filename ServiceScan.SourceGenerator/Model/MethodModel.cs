@@ -18,7 +18,7 @@ record MethodModel(
     bool ReturnsVoid,
     string ReturnType)
 {
-    public string ParameterName => Parameters.Single().Name;
+    public string ParameterName => Parameters.First().Name;
 
     public static MethodModel Create(IMethodSymbol method, SyntaxNode syntax)
     {
