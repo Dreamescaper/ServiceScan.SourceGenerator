@@ -6,8 +6,8 @@ record ServiceRegistrationModel(
     string ImplementationTypeName,
     bool ResolveImplementation,
     bool IsOpenGeneric,
-    string? KeySelectorMethodName,
-    bool? KeySelectorMethodGeneric);
+    string? KeySelector,
+    KeySelectorType? KeySelectorType);
 
 record CustomHandlerModel(
     string HandlerMethodName,

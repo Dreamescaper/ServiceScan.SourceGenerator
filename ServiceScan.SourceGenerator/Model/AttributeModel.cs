@@ -3,6 +3,8 @@ using Microsoft.CodeAnalysis;
 
 namespace ServiceScan.SourceGenerator.Model;
 
+enum KeySelectorType { Method, GenericMethod, TypeMember };
+
 record AttributeModel(
     string? AssignableToTypeName,
     EquatableArray<string>? AssignableToGenericArguments,
@@ -11,7 +13,7 @@ record AttributeModel(
     string Lifetime,
     string? TypeNameFilter,
     string? KeySelector,
-    bool? KeySelectorGeneric,
+    KeySelectorType? KeySelectorType,
     string? CustomHandler,
     bool AsImplementedInterfaces,
     bool AsSelf,
@@ -31,7 +33,7 @@ record AttributeModel(
         var keySelector = attribute.NamedArguments.FirstOrDefault(a => a.Key == "KeySelector").Value.Value as string;
         var customHandler = attribute.NamedArguments.FirstOrDefault(a => a.Key == "CustomHandler").Value.Value as string;
 
-        bool? keySelectorGeneric = null;
+        KeySelectorType? keySelectorType = null;
         if (keySelector != null)
         {
             var keySelectorMethod = method.ContainingType.GetMembers()
@@ -40,7 +42,11 @@ record AttributeModel(
 
             if (keySelectorMethod != null)
             {
-                keySelectorGeneric = keySelectorMethod.IsGenericMethod;
+                keySelectorType = keySelectorMethod.IsGenericMethod ? Model.KeySelectorType.GenericMethod : Model.KeySelectorType.Method;
+            }
+            else
+            {
+                keySelectorType = Model.KeySelectorType.TypeMember;
             }
         }
 
@@ -77,7 +83,7 @@ record AttributeModel(
             lifetime,
             typeNameFilter,
             keySelector,
-            keySelectorGeneric,
+            keySelectorType,
             customHandler,
             asImplementedInterfaces,
             asSelf,

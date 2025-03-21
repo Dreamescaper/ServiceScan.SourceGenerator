@@ -633,6 +633,42 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddAsKeyedServices_ConstantFieldInType()
+    {
+        var attribute = @"[GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = ""Key"")]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+
+            public class MyService1 : IService 
+            {
+                public const string Key = "MSR1";
+            }
+
+            public class MyService2 : IService 
+            {
+                public const string Key = "MSR2";            
+            }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddKeyedTransient<GeneratorTests.IService, GeneratorTests.MyService1>(GeneratorTests.MyService1.Key)
+                .AddKeyedTransient<GeneratorTests.IService, GeneratorTests.MyService2>(GeneratorTests.MyService2.Key);
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void DontGenerateAnythingIfTypeIsInvalid()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IWrongService))]";

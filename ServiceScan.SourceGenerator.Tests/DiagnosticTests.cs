@@ -203,32 +203,6 @@ public class DiagnosticTests
     }
 
     [Fact]
-    public void KeySelectorMethodDoesNotExist()
-    {
-        var attribute = @"
-            private static string GetName<T>() => typeof(T).Name.Replace(""Service"", """");
-
-            [GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = ""NoSuchMethodHere"")]";
-
-        var compilation = CreateCompilation(
-            Sources.MethodWithAttribute(attribute),
-            """
-            namespace GeneratorTests;
-
-            public interface IService { }
-            public class MyService1 : IService { }
-            public class MyService2 : IService { }
-            """);
-
-        var results = CSharpGeneratorDriver
-            .Create(_generator)
-            .RunGenerators(compilation)
-            .GetRunResult();
-
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodNotFound);
-    }
-
-    [Fact]
     public void KeySelectorMethod_GenericButHasParameters()
     {
         var attribute = @"

@@ -61,9 +61,11 @@ internal static class GenerateAttributeSource
             public string? TypeNameFilter { get; set; }
         
             /// <summary>
-            /// Set this property to a static method name returning string.
-            /// Returned value will be used as a key for the registration.
-            /// Method should either be generic, or have a single parameter of type <see cref="Type"/>.
+            /// Set this property to add types as keyed services. 
+            /// This property should point to one of the following:
+            /// - Name of the static method in the current type with string return type.
+            /// Method should be either generic, or have a single parameter of type <see cref="Type"/>.
+            /// - Const field or static property in the implementation type.
             /// </summary>
             /// <example>nameof(GetKey)</example>
             public string? KeySelector { get; set; }
