@@ -367,9 +367,9 @@ public class AddServicesTests
     }
 
     [Fact]
-    public void AddServicesWithAttributeFilter()
+    public void AddServicesAttributeFilterFilter()
     {
-        var attribute = """[GenerateServiceRegistrations(WithAttribute = typeof(ServiceAttribute))]""";
+        var attribute = """[GenerateServiceRegistrations(AttributeFilter = typeof(ServiceAttribute))]""";
 
         var compilation = CreateCompilation(
             Sources.MethodWithAttribute(attribute),
@@ -404,9 +404,9 @@ public class AddServicesTests
     }
 
     [Fact]
-    public void AddServicesWithAttributeFilterAndTypeNameFilter()
+    public void AddServicesAttributeFilterFilterAndTypeNameFilter()
     {
-        var attribute = """[GenerateServiceRegistrations(WithAttribute = typeof(ServiceAttribute), TypeNameFilter = "*Service")]""";
+        var attribute = """[GenerateServiceRegistrations(AttributeFilter = typeof(ServiceAttribute), TypeNameFilter = "*Service")]""";
 
         var compilation = CreateCompilation(
             Sources.MethodWithAttribute(attribute),

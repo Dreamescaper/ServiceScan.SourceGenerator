@@ -31,7 +31,7 @@ internal static class GenerateAttributeSource
             /// <summary>
             /// Filter types by specified attribute type present.
             /// </summary>
-            public Type? WithAttribute { get; set; }
+            public Type? AttributeFilter { get; set; }
 
             /// <summary>
             /// Set the lifetime of the registered services.

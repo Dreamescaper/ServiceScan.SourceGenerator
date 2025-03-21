@@ -169,7 +169,7 @@ public class CustomHandlerTests
                     
             public static partial class ServicesExtensions
             {
-                [GenerateServiceRegistrations(WithAttribute = typeof(ServiceAttribute), CustomHandler = nameof(HandleType))]
+                [GenerateServiceRegistrations(AttributeFilter = typeof(ServiceAttribute), CustomHandler = nameof(HandleType))]
                 public static partial IServiceCollection ProcessServices(this IServiceCollection services, decimal number);
 
                 private static void HandleType<T>(IServiceCollection services, decimal number) => System.Console.WriteLine(number.ToString() + typeof(T).Name);

@@ -115,6 +115,6 @@ public static partial class ServiceCollectionExtensions
 | **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. |
 | **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case implemented interfaces will be "forwarded" to an actual implementation type |
 | **TypeNameFilter** | Set this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
-| **WithAttribute** | Filter types by specified attribute type present. |
+| **AttributeFilter** | Filter types by specified attribute type present. |
 | **KeySelector** | Set this property to add types as keyed services. This property should point to one of the following: <br>- Name of the static method in the current type with string return type. Method should be either generic, or have a single parameter of type `Type`. <br>- Const field or static property in the implementation type. |
 | **CustomHandler** | Set this property to a static generic method name in the current class. This property is incompatible with `Lifetime`, `AsImplementedInterfaces`, `AsSelf`, `KeySelector` properties. |
