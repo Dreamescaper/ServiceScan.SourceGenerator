@@ -33,7 +33,7 @@ public partial class DependencyInjectionGenerator
 
                 if (attribute.CustomHandler != null)
                 {
-                    customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, implementationType.ToDisplayString()));
+                    customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
                 }
                 else
                 {
@@ -49,10 +49,10 @@ public partial class DependencyInjectionGenerator
                     {
                         if (implementationType.IsGenericType)
                         {
-                            var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString();
+                            var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                             var serviceTypeName = serviceType.IsGenericType
-                                ? serviceType.ConstructUnboundGenericType().ToDisplayString()
-                                : serviceType.ToDisplayString();
+                                ? serviceType.ConstructUnboundGenericType().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                                : serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                             var registration = new ServiceRegistrationModel(
                                 attribute.Lifetime,
@@ -70,8 +70,8 @@ public partial class DependencyInjectionGenerator
                             var shouldResolve = attribute.AsSelf && attribute.AsImplementedInterfaces && !SymbolEqualityComparer.Default.Equals(implementationType, serviceType);
                             var registration = new ServiceRegistrationModel(
                                 attribute.Lifetime,
-                                serviceType.ToDisplayString(),
-                                implementationType.ToDisplayString(),
+                                serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 shouldResolve,
                                 false,
                                 attribute.KeySelector,
