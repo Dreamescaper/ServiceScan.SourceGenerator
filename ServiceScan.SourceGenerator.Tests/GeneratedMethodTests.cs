@@ -52,7 +52,7 @@ public class GeneratedMethodTests
                 {{methodAccessModifier}} static partial IServiceCollection AddServices(this IServiceCollection services)
                 {
                     return services
-                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
+                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;
@@ -92,7 +92,7 @@ public class GeneratedMethodTests
                 public static partial void AddServices(this IServiceCollection services)
                 {
                     services
-                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
+                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;
@@ -132,7 +132,7 @@ public class GeneratedMethodTests
                 public static partial IServiceCollection AddServices( IServiceCollection services)
                 {
                     return services
-                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
+                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;
@@ -172,7 +172,7 @@ public class GeneratedMethodTests
                 private partial void AddServices( IServiceCollection services)
                 {
                     services
-                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
+                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;
@@ -211,7 +211,7 @@ public class GeneratedMethodTests
                 public static partial IServiceCollection AddServices(this IServiceCollection services)
                 {
                     return services
-                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
+                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;
@@ -251,7 +251,7 @@ public class GeneratedMethodTests
                 public static partial IServiceCollection AddServices(this IServiceCollection strangeServices)
                 {
                     return strangeServices
-                        .AddTransient<GeneratorTests.IService, GeneratorTests.MyService>();
+                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;

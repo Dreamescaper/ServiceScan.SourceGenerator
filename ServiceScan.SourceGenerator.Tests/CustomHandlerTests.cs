@@ -49,8 +49,8 @@ public class CustomHandlerTests
             {
                 public static partial void ProcessServices()
                 {
-                    HandleType<GeneratorTests.MyService1>();
-                    HandleType<GeneratorTests.MyService2>();
+                    HandleType<global::GeneratorTests.MyService1>();
+                    HandleType<global::GeneratorTests.MyService2>();
                 }
             }
             """;
@@ -97,8 +97,8 @@ public class CustomHandlerTests
             {
                 public static partial void ProcessServices( string value, decimal number)
                 {
-                    HandleType<GeneratorTests.MyFirstService>(value, number);
-                    HandleType<GeneratorTests.MySecondService>(value, number);
+                    HandleType<global::GeneratorTests.MyFirstService>(value, number);
+                    HandleType<global::GeneratorTests.MySecondService>(value, number);
                 }
             }
             """;
@@ -150,8 +150,8 @@ public class CustomHandlerTests
             {
                 public static partial GeneratorTests.IServices ProcessServices(this GeneratorTests.IServices services)
                 {
-                    HandleType<GeneratorTests.MyService1>(services);
-                    HandleType<GeneratorTests.MyService2>(services);
+                    HandleType<global::GeneratorTests.MyService1>(services);
+                    HandleType<global::GeneratorTests.MyService2>(services);
                     return services;
                 }
             }
@@ -208,8 +208,8 @@ public class CustomHandlerTests
             {
                 public static partial IServiceCollection ProcessServices(this IServiceCollection services, decimal number)
                 {
-                    HandleType<GeneratorTests.MyFirstService>(services, number);
-                    HandleType<GeneratorTests.MySecondService>(services, number);
+                    HandleType<global::GeneratorTests.MyFirstService>(services, number);
+                    HandleType<global::GeneratorTests.MySecondService>(services, number);
                     return services;
                 }
             }
