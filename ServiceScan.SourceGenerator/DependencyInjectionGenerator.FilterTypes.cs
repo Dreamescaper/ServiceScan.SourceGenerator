@@ -24,6 +24,13 @@ public partial class DependencyInjectionGenerator
             ? null
             : compilation.GetTypeByMetadataName(attribute.AttributeFilterTypeName);
 
+        var excludeByAttributeType = attribute.ExcludeByAttributeTypeName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.ExcludeByAttributeTypeName);
+
+        var typeNameFilterRegex = BuildWildcardRegex(attribute.TypeNameFilter);
+        var excludeByTypeNameRegex = BuildWildcardRegex(attribute.ExcludeByTypeName);
+
         if (assignableToType != null && attribute.AssignableToGenericArguments != null)
         {
             var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
@@ -41,11 +48,21 @@ public partial class DependencyInjectionGenerator
                     continue;
             }
 
-            if (attribute.TypeNameFilter != null)
+            if (excludeByAttributeType != null)
             {
-                var regex = $"^({Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
+                if (type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, excludeByAttributeType)))
+                    continue;
+            }
 
-                if (!Regex.IsMatch(type.ToDisplayString(), regex))
+            if (typeNameFilterRegex != null)
+            {
+                if (!typeNameFilterRegex.IsMatch(type.ToDisplayString()))
+                    continue;
+            }
+
+            if (excludeByTypeNameRegex != null)
+            {
+                if (excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
                     continue;
             }
 
@@ -134,5 +151,12 @@ public partial class DependencyInjectionGenerator
                 }
             }
         }
+    }
+
+    private static Regex? BuildWildcardRegex(string? wildcard)
+    {
+        return wildcard is null
+            ? null
+            : new Regex($"^({Regex.Escape(wildcard).Replace(@"\*", ".*").Replace(",", "|")})$");
     }
 }
