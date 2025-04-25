@@ -22,7 +22,8 @@ record MethodModel(
 
     public static MethodModel Create(IMethodSymbol method, SyntaxNode syntax)
     {
-        EquatableArray<ParameterModel> parameters = [.. method.Parameters.Select(p => new ParameterModel(p.Type.ToDisplayString(), p.Name))];
+        EquatableArray<ParameterModel> parameters = [.. method.Parameters
+            .Select(p => new ParameterModel(p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), p.Name))];
 
         var typeSyntax = syntax.FirstAncestorOrSelf<TypeDeclarationSyntax>();
 
@@ -36,7 +37,7 @@ record MethodModel(
             Parameters: parameters,
             IsExtensionMethod: method.IsExtensionMethod,
             ReturnsVoid: method.ReturnsVoid,
-            ReturnType: method.ReturnType.ToDisplayString());
+            ReturnType: method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
     }
 
     private static string GetModifiers(SyntaxNode syntax)
