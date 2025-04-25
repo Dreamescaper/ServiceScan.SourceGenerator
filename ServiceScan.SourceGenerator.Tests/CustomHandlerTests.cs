@@ -148,7 +148,7 @@ public class CustomHandlerTests
 
             public static partial class ServicesExtensions
             {
-                public static partial GeneratorTests.IServices ProcessServices(this GeneratorTests.IServices services)
+                public static partial global::GeneratorTests.IServices ProcessServices(this global::GeneratorTests.IServices services)
                 {
                     HandleType<global::GeneratorTests.MyService1>(services);
                     HandleType<global::GeneratorTests.MyService2>(services);
