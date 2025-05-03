@@ -701,6 +701,37 @@ public class AddServicesTests
         """;
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
+    
+    [Fact]
+    public void AddServices_AssignableToAndExcludeAssignableTo()
+    {
+        var attribute = """[GenerateServiceRegistrations(AssignableTo = typeof(IService), ExcludeAssignableTo = typeof(IExclude))]""";
+
+        var compilation = CreateCompilation(
+        Sources.MethodWithAttribute(attribute),
+        """
+        namespace GeneratorTests;
+
+        public interface IService { }
+        public interface IExclude { }
+
+        public class MyFirstService : IService { }
+        public class MySecondService : IService, IExclude { }
+        public class MyThirdService : IService { }
+        """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+                             return services
+                                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyFirstService>()
+                                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyThirdService>();
+                             """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
 
     [Fact]
     public void AddServicesWithTypeNameFilterAsImplementedInterfaces()

@@ -70,7 +70,7 @@ public partial class DependencyInjectionGenerator
             if (excludeByTypeNameRegex != null && excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
                 continue;
             
-            if (excludeAssignableToType != null && IsAssignableTo(type, assignableToType, out _))
+            if (excludeAssignableToType != null && IsAssignableTo(type, excludeAssignableToType, out _))
                 continue;
 
             INamedTypeSymbol matchedType = null;
