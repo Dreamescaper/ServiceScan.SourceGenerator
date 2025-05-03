@@ -20,14 +20,31 @@ public partial class DependencyInjectionGenerator
             ? null
             : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
 
+        var excludeAssignableToType = attribute.ExcludeAssignableToTypeName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.ExcludeAssignableToTypeName);
+
         var attributeFilterType = attribute.AttributeFilterTypeName is null
             ? null
             : compilation.GetTypeByMetadataName(attribute.AttributeFilterTypeName);
+
+        var excludeByAttributeType = attribute.ExcludeByAttributeTypeName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.ExcludeByAttributeTypeName);
+
+        var typeNameFilterRegex = BuildWildcardRegex(attribute.TypeNameFilter);
+        var excludeByTypeNameRegex = BuildWildcardRegex(attribute.ExcludeByTypeName);
 
         if (assignableToType != null && attribute.AssignableToGenericArguments != null)
         {
             var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
             assignableToType = assignableToType.Construct(typeArguments);
+        }
+
+        if (excludeAssignableToType != null && attribute.ExcludeAssignableToGenericArguments != null)
+        {
+            var typeArguments = attribute.ExcludeAssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
+            excludeAssignableToType = excludeAssignableToType.Construct(typeArguments);
         }
 
         foreach (var type in GetTypesFromAssembly(assembly))
@@ -41,13 +58,20 @@ public partial class DependencyInjectionGenerator
                     continue;
             }
 
-            if (attribute.TypeNameFilter != null)
+            if (excludeByAttributeType != null)
             {
-                var regex = $"^({Regex.Escape(attribute.TypeNameFilter).Replace(@"\*", ".*").Replace(",", "|")})$";
-
-                if (!Regex.IsMatch(type.ToDisplayString(), regex))
+                if (type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, excludeByAttributeType)))
                     continue;
             }
+
+            if (typeNameFilterRegex != null && !typeNameFilterRegex.IsMatch(type.ToDisplayString()))
+                continue;
+
+            if (excludeByTypeNameRegex != null && excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
+                continue;
+            
+            if (excludeAssignableToType != null && IsAssignableTo(type, excludeAssignableToType, out _))
+                continue;
 
             INamedTypeSymbol matchedType = null;
             if (assignableToType != null && !IsAssignableTo(type, assignableToType, out matchedType))
@@ -57,7 +81,7 @@ public partial class DependencyInjectionGenerator
         }
     }
 
-    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol matchedType)
+    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol? matchedType)
     {
         if (SymbolEqualityComparer.Default.Equals(type, assignableTo))
         {
@@ -134,5 +158,12 @@ public partial class DependencyInjectionGenerator
                 }
             }
         }
+    }
+
+    private static Regex? BuildWildcardRegex(string? wildcard)
+    {
+        return wildcard is null
+            ? null
+            : new Regex($"^({Regex.Escape(wildcard).Replace(@"\*", ".*").Replace(",", "|")})$");
     }
 }

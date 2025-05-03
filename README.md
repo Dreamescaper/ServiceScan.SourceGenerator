@@ -139,12 +139,15 @@ public static partial class ServiceCollectionExtensions
 `GenerateServiceRegistrations` attribute has the following properties:
 | Property | Description |
 | --- | --- |
-| **FromAssemblyOf** |Set the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
+| **FromAssemblyOf** | Set the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
 | **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type, unless `AsImplementedInterfaces` or `AsSelf` is set. |
 | **Lifetime** | Set the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
 | **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. |
-| **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case implemented interfaces will be "forwarded" to an actual implementation type |
+| **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case, implemented interfaces will be "forwarded" to an actual implementation type. |
 | **TypeNameFilter** | Set this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
-| **AttributeFilter** | Filter types by specified attribute type present. |
-| **KeySelector** | Set this property to add types as keyed services. This property should point to one of the following: <br>- Name of the static method in the current type with string return type. Method should be either generic, or have a single parameter of type `Type`. <br>- Const field or static property in the implementation type. |
-| **CustomHandler** | Set this property to a static generic method name in the current class. This property is incompatible with `Lifetime`, `AsImplementedInterfaces`, `AsSelf`, `KeySelector` properties. |
+| **AttributeFilter** | Filter types by the specified attribute type present. |
+| **ExcludeByTypeName** | Set this value to exclude types from being registered by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
+| **ExcludeByAttribute** | Exclude matching types by the specified attribute type present. |
+| **ExcludeAssignableTo** | Set the type that the registered types must not be assignable to. |
+| **KeySelector** | Set this property to add types as keyed services. This property should point to one of the following: <br>- Name of the static method in the current type with a string return type. The method should be either generic or have a single parameter of type `Type`. <br>- Const field or static property in the implementation type. |
+| **CustomHandler** | Set this property to a static generic method name in the current class. This method will be invoked for each type found by the filter instead of the regular registration logic. This property is incompatible with `Lifetime`, `AsImplementedInterfaces`, `AsSelf`, and `KeySelector` properties. |
