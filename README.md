@@ -147,5 +147,6 @@ public static partial class ServiceCollectionExtensions
 | **AttributeFilter** | Filter types by the specified attribute type present. |
 | **ExcludeByTypeName** | Set this value to exclude types from being registered by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
 | **ExcludeByAttribute** | Exclude matching types by the specified attribute type present. |
+| **ExcludeAssignableTo** | Set the type that the registered types must not be assignable to. |
 | **KeySelector** | Set this property to add types as keyed services. This property should point to one of the following: <br>- Name of the static method in the current type with a string return type. The method should be either generic or have a single parameter of type `Type`. <br>- Const field or static property in the implementation type. |
 | **CustomHandler** | Set this property to a static generic method name in the current class. This method will be invoked for each type found by the filter instead of the regular registration logic. This property is incompatible with `Lifetime`, `AsImplementedInterfaces`, `AsSelf`, and `KeySelector` properties. |

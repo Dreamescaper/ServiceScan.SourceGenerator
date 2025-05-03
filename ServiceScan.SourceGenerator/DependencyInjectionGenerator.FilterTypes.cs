@@ -20,6 +20,10 @@ public partial class DependencyInjectionGenerator
             ? null
             : compilation.GetTypeByMetadataName(attribute.AssignableToTypeName);
 
+        var excludeAssignableToType = attribute.ExcludeAssignableToTypeName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.ExcludeAssignableToTypeName);
+
         var attributeFilterType = attribute.AttributeFilterTypeName is null
             ? null
             : compilation.GetTypeByMetadataName(attribute.AttributeFilterTypeName);
@@ -35,6 +39,12 @@ public partial class DependencyInjectionGenerator
         {
             var typeArguments = attribute.AssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
             assignableToType = assignableToType.Construct(typeArguments);
+        }
+
+        if (excludeAssignableToType != null && attribute.ExcludeAssignableToGenericArguments != null)
+        {
+            var typeArguments = attribute.ExcludeAssignableToGenericArguments.Value.Select(t => compilation.GetTypeByMetadataName(t)).ToArray();
+            excludeAssignableToType = excludeAssignableToType.Construct(typeArguments);
         }
 
         foreach (var type in GetTypesFromAssembly(assembly))
@@ -54,17 +64,14 @@ public partial class DependencyInjectionGenerator
                     continue;
             }
 
-            if (typeNameFilterRegex != null)
-            {
-                if (!typeNameFilterRegex.IsMatch(type.ToDisplayString()))
-                    continue;
-            }
+            if (typeNameFilterRegex != null && !typeNameFilterRegex.IsMatch(type.ToDisplayString()))
+                continue;
 
-            if (excludeByTypeNameRegex != null)
-            {
-                if (excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
-                    continue;
-            }
+            if (excludeByTypeNameRegex != null && excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
+                continue;
+            
+            if (excludeAssignableToType != null && IsAssignableTo(type, assignableToType, out _))
+                continue;
 
             INamedTypeSymbol matchedType = null;
             if (assignableToType != null && !IsAssignableTo(type, assignableToType, out matchedType))
@@ -74,7 +81,7 @@ public partial class DependencyInjectionGenerator
         }
     }
 
-    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol matchedType)
+    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol? matchedType)
     {
         if (SymbolEqualityComparer.Default.Equals(type, assignableTo))
         {

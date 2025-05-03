@@ -570,6 +570,139 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddServices_ExcludeAssignableTo_Interface()
+    {
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(IExclude))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+        namespace GeneratorTests;
+
+        public interface IExclude {}
+
+        public class MyFirstService {}
+        
+        public class MySecondService : IExclude {}
+        
+        public class ThirdService {}
+        """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+        return services
+            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
+            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void AddServices_ExcludeAssignableTo_AbstractClass()
+    {
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(ExcludeBase))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+        namespace GeneratorTests;
+
+        public abstract class ExcludeBase {}
+
+        public class MyFirstService {}
+        
+        public class MySecondService : ExcludeBase {}
+        
+        public class ThirdService {}
+        """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+        return services
+            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
+            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+    
+    [Fact]
+    public void AddServices_ExcludeAssignableTo_OpenGenericInterface()
+    {
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(IExclude<>))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+        namespace GeneratorTests;
+
+        public interface IExclude<T> {}
+
+        public class MyFirstService {}
+        
+        public class MySecondService : IExclude<int> {}
+        
+        public class ThirdService : IExclude<string> {}
+        
+        public class FourthService {}
+        """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+        return services
+            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
+            .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+    
+    [Fact]
+    public void AddServices_ExcludeAssignableTo_ClosedGenericInterface()
+    {
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(IExclude<int>))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+        namespace GeneratorTests;
+
+        public interface IExclude<T> {}
+
+        public class MyFirstService {}
+        
+        public class MySecondService : IExclude<int> {}
+        
+        public class ThirdService : IExclude<string> {}
+        
+        public class FourthService {}
+        """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+        return services
+            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
+            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>()
+            .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddServicesWithTypeNameFilterAsImplementedInterfaces()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", AsImplementedInterfaces = true))]""";
@@ -804,3 +937,4 @@ public class AddServicesTests
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 }
+

@@ -29,6 +29,11 @@ internal static class GenerateAttributeSource
             public Type? AssignableTo { get; set; }
 
             /// <summary>
+            /// Set the type that the registered types must *not* be assignable to.
+            /// </summary>
+            public Type? ExcludeAssignableTo { get; set; }
+
+            /// <summary>
             /// Set the lifetime of the registered services.
             /// <see cref="ServiceLifetime.Transient"/> is used if not specified.
             /// </summary>
@@ -94,3 +99,4 @@ internal static class GenerateAttributeSource
         }
         """;
 }
+
