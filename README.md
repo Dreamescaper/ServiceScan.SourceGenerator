@@ -1,5 +1,6 @@
 # ServiceScan.SourceGenerator
 [![NuGet Version](https://img.shields.io/nuget/v/ServiceScan.SourceGenerator)](https://www.nuget.org/packages/ServiceScan.SourceGenerator/)
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://stand-with-ukraine.pp.ua)
 
 Source generator for services registrations inspired by [Scrutor](https://github.com/khellang/Scrutor/).
 Code generation allows to have AOT-compatible code, without an additional hit on startup performance due to runtime assembly scanning.
