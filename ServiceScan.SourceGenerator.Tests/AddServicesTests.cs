@@ -632,7 +632,7 @@ public class AddServicesTests
         """;
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
-    
+
     [Fact]
     public void AddServices_ExcludeAssignableTo_OpenGenericInterface()
     {
@@ -666,7 +666,7 @@ public class AddServicesTests
         """;
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
-    
+
     [Fact]
     public void AddServices_ExcludeAssignableTo_ClosedGenericInterface()
     {
@@ -701,7 +701,7 @@ public class AddServicesTests
         """;
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
-    
+
     [Fact]
     public void AddServices_AssignableToAndExcludeAssignableTo()
     {
@@ -796,6 +796,45 @@ public class AddServicesTests
                 .AddSingleton<global::GeneratorTests.MyService, global::GeneratorTests.MyService>()
                 .AddSingleton<global::GeneratorTests.IServiceA>(s => s.GetRequiredService<global::GeneratorTests.MyService>())
                 .AddSingleton<global::GeneratorTests.IServiceB>(s => s.GetRequiredService<global::GeneratorTests.MyService>());
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void IDisposableServiceAreExcludedWithImplementedInterfaces()
+    {
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", AsImplementedInterfaces = true))]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IServiceA {}
+            public interface IServiceB {}
+            public interface IServiceC {}
+            
+            public class MyFirstService: IServiceA, System.IDisposable
+            {
+                public void Dispose() {}
+            }
+            
+            public class MySecondService: IServiceB, IServiceC, System.IDisposable
+            {
+                public void Dispose() {}
+            }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<global::GeneratorTests.IServiceA, global::GeneratorTests.MyFirstService>()
+                .AddTransient<global::GeneratorTests.IServiceB, global::GeneratorTests.MySecondService>()
+                .AddTransient<global::GeneratorTests.IServiceC, global::GeneratorTests.MySecondService>();
             """;
         Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
     }
