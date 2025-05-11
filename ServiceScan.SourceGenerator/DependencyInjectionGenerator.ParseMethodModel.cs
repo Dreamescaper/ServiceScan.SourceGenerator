@@ -8,7 +8,7 @@ namespace ServiceScan.SourceGenerator;
 
 public partial class DependencyInjectionGenerator
 {
-    private static DiagnosticModel<MethodWithAttributesModel> ParseRegisterMethodModel(GeneratorAttributeSyntaxContext context)
+    private static DiagnosticModel<MethodWithAttributesModel>? ParseRegisterMethodModel(GeneratorAttributeSyntaxContext context)
     {
         if (context.TargetSymbol is not IMethodSymbol method)
             return null;

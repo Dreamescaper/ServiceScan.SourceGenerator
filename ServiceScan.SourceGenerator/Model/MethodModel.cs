@@ -7,7 +7,7 @@ namespace ServiceScan.SourceGenerator.Model;
 record ParameterModel(string Type, string Name);
 
 record MethodModel(
-    string Namespace,
+    string? Namespace,
     string TypeName,
     string TypeMetadataName,
     string TypeModifiers,
@@ -40,7 +40,7 @@ record MethodModel(
             ReturnType: method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
     }
 
-    private static string GetModifiers(SyntaxNode syntax)
+    private static string GetModifiers(SyntaxNode? syntax)
     {
         return (syntax as MemberDeclarationSyntax)?.Modifiers.ToString() ?? "";
     }

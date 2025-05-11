@@ -12,9 +12,11 @@ public partial class DependencyInjectionGenerator
     private static IEnumerable<(INamedTypeSymbol Type, INamedTypeSymbol? MatchedAssignableType)> FilterTypes
         (Compilation compilation, AttributeModel attribute, INamedTypeSymbol containingType)
     {
-        var assembly = (attribute.AssemblyOfTypeName is null
-            ? containingType
-            : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName)).ContainingAssembly;
+        var assemblyOfType = attribute.AssemblyOfTypeName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName);
+        
+        var assembly = (assemblyOfType ?? containingType).ContainingAssembly;
 
         var assignableToType = attribute.AssignableToTypeName is null
             ? null

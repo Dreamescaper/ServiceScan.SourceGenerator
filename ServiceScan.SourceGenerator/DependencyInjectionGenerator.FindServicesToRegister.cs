@@ -8,6 +8,11 @@ namespace ServiceScan.SourceGenerator;
 
 public partial class DependencyInjectionGenerator
 {
+    private static readonly string[] ExcludedInterfaces = [
+        "System.IDisposable",
+        "System.IAsyncDisposable"
+    ];
+
     private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, Compilation) context)
     {
         var (diagnosticModel, compilation) = context;
@@ -18,14 +23,13 @@ public partial class DependencyInjectionGenerator
 
         var (method, attributes) = diagnosticModel.Model;
 
+        var containingType = compilation.GetTypeByMetadataName(method.TypeMetadataName);
         var registrations = new List<ServiceRegistrationModel>();
         var customHandlers = new List<CustomHandlerModel>();
 
         foreach (var attribute in attributes)
         {
             bool typesFound = false;
-
-            var containingType = compilation.GetTypeByMetadataName(method.TypeMetadataName);
 
             foreach (var (implementationType, matchedType) in FilterTypes(compilation, attribute, containingType))
             {
@@ -37,10 +41,10 @@ public partial class DependencyInjectionGenerator
                 }
                 else
                 {
-                    IEnumerable<INamedTypeSymbol> serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
+                    var serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
                     {
-                        (true, true) => new[] { implementationType }.Concat(implementationType.AllInterfaces),
-                        (false, true) => implementationType.AllInterfaces,
+                        (true, true) => new[] { implementationType }.Concat(GetSuitableInterfaces(implementationType)),
+                        (false, true) => GetSuitableInterfaces(implementationType),
                         (true, false) => [implementationType],
                         _ => [matchedType ?? implementationType]
                     };
@@ -89,5 +93,10 @@ public partial class DependencyInjectionGenerator
 
         var implementationModel = new MethodImplementationModel(method, [.. registrations], [.. customHandlers]);
         return new(diagnostic, implementationModel);
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetSuitableInterfaces(ITypeSymbol type)
+    {
+        return type.AllInterfaces.Where(x => !ExcludedInterfaces.Contains(x.ToDisplayString()));
     }
 }
