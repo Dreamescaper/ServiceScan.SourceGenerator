@@ -18,8 +18,15 @@ internal static class GenerateAttributeSource
             /// <summary>
             /// Set the assembly containing the given type as the source of types to register.
             /// If not specified, the assembly containing the method with this attribute will be used.
+            /// Will be ignored if FromAssembliesOf is specified.
             /// </summary>
             public Type? FromAssemblyOf { get; set; }
+        
+            /// <summary>
+            /// Set the assemblies containing the given type as the source of types to register.
+            /// If not specified, the assembly containing the FromAssemblyOf or the assembly containing method with this attribute will be used.
+            /// </summary>
+            public Type[]? FromAssembliesOf { get; set; }
         
             /// <summary>
             /// Set the type that the registered types must be assignable to.

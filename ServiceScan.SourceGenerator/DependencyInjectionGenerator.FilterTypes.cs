@@ -12,11 +12,12 @@ public partial class DependencyInjectionGenerator
     private static IEnumerable<(INamedTypeSymbol Type, INamedTypeSymbol? MatchedAssignableType)> FilterTypes
         (Compilation compilation, AttributeModel attribute, INamedTypeSymbol containingType)
     {
-        var assemblyOfType = attribute.AssemblyOfTypeName is null
-            ? null
-            : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName);
+        var assembliesOfTypes = 
+            attribute.AssembliesOfTypesNames?.Select(compilation.GetTypeByMetadataName);
         
-        var assembly = (assemblyOfType ?? containingType).ContainingAssembly;
+        var assemblies = (assembliesOfTypes ?? [containingType])
+            .Select(x => x.ContainingAssembly)
+            .ToArray();
 
         var assignableToType = attribute.AssignableToTypeName is null
             ? null
@@ -49,37 +50,40 @@ public partial class DependencyInjectionGenerator
             excludeAssignableToType = excludeAssignableToType.Construct(typeArguments);
         }
 
-        foreach (var type in GetTypesFromAssembly(assembly))
+        foreach (var assembly in assemblies)
         {
-            if (type.IsAbstract || type.IsStatic || !type.CanBeReferencedByName || type.TypeKind != TypeKind.Class)
-                continue;
-
-            if (attributeFilterType != null)
+            foreach (var type in GetTypesFromAssembly(assembly))
             {
-                if (!type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeFilterType)))
+                if (type.IsAbstract || type.IsStatic || !type.CanBeReferencedByName || type.TypeKind != TypeKind.Class)
                     continue;
-            }
 
-            if (excludeByAttributeType != null)
-            {
-                if (type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, excludeByAttributeType)))
+                if (attributeFilterType != null)
+                {
+                    if (!type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeFilterType)))
+                        continue;
+                }
+
+                if (excludeByAttributeType != null)
+                {
+                    if (type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, excludeByAttributeType)))
+                        continue;
+                }
+
+                if (typeNameFilterRegex != null && !typeNameFilterRegex.IsMatch(type.ToDisplayString()))
                     continue;
-            }
 
-            if (typeNameFilterRegex != null && !typeNameFilterRegex.IsMatch(type.ToDisplayString()))
-                continue;
-
-            if (excludeByTypeNameRegex != null && excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
-                continue;
+                if (excludeByTypeNameRegex != null && excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
+                    continue;
             
-            if (excludeAssignableToType != null && IsAssignableTo(type, excludeAssignableToType, out _))
-                continue;
+                if (excludeAssignableToType != null && IsAssignableTo(type, excludeAssignableToType, out _))
+                    continue;
 
-            INamedTypeSymbol matchedType = null;
-            if (assignableToType != null && !IsAssignableTo(type, assignableToType, out matchedType))
-                continue;
+                INamedTypeSymbol matchedType = null;
+                if (assignableToType != null && !IsAssignableTo(type, assignableToType, out matchedType))
+                    continue;
 
-            yield return (type, matchedType);
+                yield return (type, matchedType);
+            }
         }
     }
 

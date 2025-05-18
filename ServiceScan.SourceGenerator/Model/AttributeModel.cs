@@ -8,7 +8,7 @@ enum KeySelectorType { Method, GenericMethod, TypeMember };
 record AttributeModel(
     string? AssignableToTypeName,
     EquatableArray<string>? AssignableToGenericArguments,
-    string? AssemblyOfTypeName,
+    string[]? AssembliesOfTypesNames,
     string Lifetime,
     string? AttributeFilterTypeName,
     string? TypeNameFilter,
@@ -28,7 +28,18 @@ record AttributeModel(
 
     public static AttributeModel Create(AttributeData attribute, IMethodSymbol method)
     {
-        var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
+        var assembliesTypes = attribute.NamedArguments
+            .FirstOrDefault(a => a.Key == "FromAssembliesOf").Value is { Kind: TypedConstantKind.Array } constantValue
+            ? constantValue.Values.Select(tc => tc.Value as INamedTypeSymbol).ToArray()
+            : null!;
+
+        if (assembliesTypes is null)
+        {
+            assembliesTypes = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value is INamedTypeSymbol namedTypeSymbol
+                ? [namedTypeSymbol]
+                : null!;
+        }
+        
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
         var asImplementedInterfaces = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsImplementedInterfaces").Value.Value is true;
         var asSelf = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsSelf").Value.Value is true;
@@ -65,7 +76,7 @@ record AttributeModel(
 
         var attributeFilterTypeName = attributeFilterType?.ToFullMetadataName();
         var excludeByAttributeTypeName = excludeByAttributeType?.ToFullMetadataName();
-        var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
+        var assembliesOfTypesNames = assembliesTypes?.Select(x => x.ToFullMetadataName()).ToArray();
         var assignableToTypeName = assignableTo?.ToFullMetadataName();
         var excludeAssignableToTypeName = excludeAssignableTo?.ToFullMetadataName();
         EquatableArray<string>? assignableToGenericArguments = assignableTo != null && assignableTo.IsGenericType && !assignableTo.IsUnboundGenericType
@@ -86,14 +97,14 @@ record AttributeModel(
         var textSpan = attribute.ApplicationSyntaxReference.Span;
         var location = Location.Create(syntax, textSpan);
 
-        var hasError = assemblyType is { TypeKind: TypeKind.Error }
+        var hasError = (assembliesTypes?.Any(x => x is { TypeKind: TypeKind.Error }) ?? false)
             || assignableTo is { TypeKind: TypeKind.Error }
             || attributeFilterType is { TypeKind: TypeKind.Error };
 
         return new(
             assignableToTypeName,
             assignableToGenericArguments,
-            assemblyOfTypeName,
+            assembliesOfTypesNames,
             lifetime,
             attributeFilterTypeName,
             typeNameFilter,
