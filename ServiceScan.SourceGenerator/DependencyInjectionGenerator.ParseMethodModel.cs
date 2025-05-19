@@ -84,7 +84,7 @@ public partial class DependencyInjectionGenerator
         }
         else
         {
-            if (method.IsExtensionMethod && !method.ReturnsVoid &&
+            if (!method.ReturnsVoid &&
                 (method.Parameters.Length == 0 || !SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, method.ReturnType)))
             {
                 return Diagnostic.Create(WrongReturnTypeForCustomHandler, method.Locations[0]);

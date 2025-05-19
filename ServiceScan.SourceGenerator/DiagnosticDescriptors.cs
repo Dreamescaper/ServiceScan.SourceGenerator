@@ -55,7 +55,7 @@ public static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor WrongReturnTypeForCustomHandler = new("DI0009",
         "Wrong return type",
-        "Method with CustomHandler must return void or 'this' parameter type",
+        "Method with CustomHandler must return void or first parameter type",
         "Usage",
         DiagnosticSeverity.Error,
         true);
