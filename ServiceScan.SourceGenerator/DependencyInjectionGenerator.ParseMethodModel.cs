@@ -27,8 +27,8 @@ public partial class DependencyInjectionGenerator
                 return Diagnostic.Create(MissingSearchCriteria, attribute.Location);
 
             hasCustomHandler |= attribute.CustomHandler != null;
-            if (hasCustomHandler && context.Attributes.Length != 1)
-                return Diagnostic.Create(OnlyOneCustomHandlerAllowed, attribute.Location);
+            if (hasCustomHandler && attribute.CustomHandler == null)
+                return Diagnostic.Create(CantMixRegularAndCustomHandlerRegistrations, attribute.Location);
 
             if (attribute.KeySelector != null)
             {

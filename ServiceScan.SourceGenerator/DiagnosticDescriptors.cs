@@ -46,9 +46,9 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         true);
 
-    public static readonly DiagnosticDescriptor OnlyOneCustomHandlerAllowed = new("DI0008",
-        "Only one GenerateServiceRegistrations attribute is allowed when CustomHandler used",
-        "Only one GenerateServiceRegistrations attribute is allowed when CustomHandler used",
+    public static readonly DiagnosticDescriptor CantMixRegularAndCustomHandlerRegistrations = new("DI0008",
+        "It's not allowed to mix GenerateServiceRegistrations attributes with and without CustomHandler on the same method",
+        "It's not allowed to mix GenerateServiceRegistrations attributes with and without CustomHandler on the same method",
         "Usage",
         DiagnosticSeverity.Error,
         true);
@@ -69,7 +69,7 @@ public static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor CustomHandlerMethodHasIncorrectSignature = new("DI0011",
         "Provided CustomHandler method has incorrect signature",
-        "CustomHandler method must be generic, and must have the same parameters as the method with an attribute",
+        "CustomHandler method must be generic, and must have the same parameters as the method with the attribute",
         "Usage",
         DiagnosticSeverity.Error,
         true);

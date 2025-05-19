@@ -217,6 +217,109 @@ public class CustomHandlerTests
         Assert.Equal(expected, results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void AddMultipleCustomHandlerAttributesWithDifferentCustomHandler()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IFirstService), CustomHandler = nameof(HandleFirstType))]
+                [GenerateServiceRegistrations(AssignableTo = typeof(ISecondService), CustomHandler = nameof(HandleSecondType))]
+                public static partial void ProcessServices();
+
+                private static void HandleFirstType<T>() => System.Console.WriteLine("First:" + typeof(T).Name);
+                private static void HandleSecondType<T>() => System.Console.WriteLine("Second:" + typeof(T).Name);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IFirstService { }
+            public interface ISecondService { }
+            public class MyService1 : IFirstService { }
+            public class MyService2 : ISecondService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial void ProcessServices()
+                {
+                    HandleFirstType<global::GeneratorTests.MyService1>();
+                    HandleSecondType<global::GeneratorTests.MyService2>();
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
+
+    [Fact]
+    public void AddMultipleCustomHandlerAttributesWithSameCustomHandler()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IFirstService), CustomHandler = nameof(HandleType))]
+                [GenerateServiceRegistrations(AssignableTo = typeof(ISecondService), CustomHandler = nameof(HandleType))]
+                public static partial void ProcessServices();
+
+                private static void HandleType<T>() => System.Console.WriteLine(typeof(T).Name);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IFirstService { }
+            public interface ISecondService { }
+            public class MyService1 : IFirstService { }
+            public class MyService2 : ISecondService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial void ProcessServices()
+                {
+                    HandleType<global::GeneratorTests.MyService1>();
+                    HandleType<global::GeneratorTests.MyService2>();
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
