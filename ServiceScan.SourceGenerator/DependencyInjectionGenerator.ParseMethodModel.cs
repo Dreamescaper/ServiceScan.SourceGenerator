@@ -16,8 +16,9 @@ public partial class DependencyInjectionGenerator
         if (!method.IsPartialDefinition)
             return Diagnostic.Create(NotPartialDefinition, method.Locations[0]);
 
-        var hasCustomHandler = false;
-        var attributeData = new AttributeModel[context.Attributes.Length];
+        var attributeData = context.Attributes.Select(a => AttributeModel.Create(a, method)).ToArray();
+        var hasCustomHandlers = attributeData.Any(a => a.CustomHandler != null);
+
         for (var i = 0; i < context.Attributes.Length; i++)
         {
             var attribute = AttributeModel.Create(context.Attributes[i], method);
@@ -26,9 +27,8 @@ public partial class DependencyInjectionGenerator
             if (!attribute.HasSearchCriteria)
                 return Diagnostic.Create(MissingSearchCriteria, attribute.Location);
 
-            hasCustomHandler |= attribute.CustomHandler != null;
-            if (hasCustomHandler && context.Attributes.Length != 1)
-                return Diagnostic.Create(OnlyOneCustomHandlerAllowed, attribute.Location);
+            if (hasCustomHandlers && attribute.CustomHandler == null)
+                return Diagnostic.Create(CantMixRegularAndCustomHandlerRegistrations, attribute.Location);
 
             if (attribute.KeySelector != null)
             {
@@ -72,7 +72,7 @@ public partial class DependencyInjectionGenerator
                 return null;
         }
 
-        if (!hasCustomHandler)
+        if (!hasCustomHandlers)
         {
             var serviceCollectionType = context.SemanticModel.Compilation.GetTypeByMetadataName("Microsoft.Extensions.DependencyInjection.IServiceCollection");
 
