@@ -143,9 +143,12 @@ public partial class DependencyInjectionGenerator
     {
         yield return compilation.Assembly;
 
-        foreach (var reference in compilation.References.OfType<CompilationReference>())
+        foreach (var reference in compilation.References)
         {
-            yield return reference.Compilation.Assembly;
+            if (reference is CompilationReference)
+            {
+                yield return (IAssemblySymbol)compilation.GetAssemblyOrModuleSymbol(reference);
+            }
         }
     }
 
