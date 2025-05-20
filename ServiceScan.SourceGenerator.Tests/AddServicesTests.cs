@@ -60,6 +60,48 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddServicesFromReferencedCompilationsByDefault()
+    {
+        var coreCompilation = CreateCompilation(
+            """
+            namespace Core;
+            public interface IService { }
+            """)
+            .WithAssemblyName("Core");
+
+        var implementation1Compilation = CreateCompilation(["""
+            namespace Module1;
+            public class MyService1 : Core.IService { }
+            """],
+            [coreCompilation])
+            .WithAssemblyName("Module1");
+
+        var implementation2Compilation = CreateCompilation(["""
+            namespace Module2;
+            public class MyService2 : Core.IService { }
+            """],
+            [coreCompilation])
+            .WithAssemblyName("Module2");
+
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(Core.IService), Lifetime = ServiceLifetime.Scoped)]";
+        var registrationsCompilation = CreateCompilation(
+            [Sources.MethodWithAttribute(attribute)],
+            [coreCompilation, implementation1Compilation, implementation2Compilation]);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(registrationsCompilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddScoped<global::Core.IService, global::Module1.MyService1>()
+                .AddScoped<global::Core.IService, global::Module2.MyService2>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddServiceWithNonDirectInterface()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService))]";
@@ -991,19 +1033,28 @@ public class AddServicesTests
 
     private static Compilation CreateCompilation(params string[] source)
     {
+        return CreateCompilation(source, []);
+    }
+
+    private static Compilation CreateCompilation(string[] source, Compilation[] referencedCompilations)
+    {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
         var runtimeAssemblyPath = Path.Combine(path, "System.Runtime.dll");
 
         var runtimeReference = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
 
-        return CSharpCompilation.Create("compilation",
-                source.Select(s => CSharpSyntaxTree.ParseText(s)),
-                [
+        var metadataReferences = new MetadataReference[]
+            {
                     MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
                     MetadataReference.CreateFromFile(runtimeAssemblyPath),
                     MetadataReference.CreateFromFile(typeof(IServiceCollection).Assembly.Location),
-                    MetadataReference.CreateFromFile(typeof(External.IExternalService).Assembly.Location),
-                ],
+                    MetadataReference.CreateFromFile(typeof(External.IExternalService).Assembly.Location)
+            }
+            .Concat(referencedCompilations.Select(c => c.ToMetadataReference()));
+
+        return CSharpCompilation.Create("compilation",
+                source.Select(s => CSharpSyntaxTree.ParseText(s)),
+                metadataReferences,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 }

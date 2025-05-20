@@ -15,8 +15,10 @@ public partial class DependencyInjectionGenerator
         var assemblyOfType = attribute.AssemblyOfTypeName is null
             ? null
             : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName);
-        
-        var assembly = (assemblyOfType ?? containingType).ContainingAssembly;
+
+        var assemblies = assemblyOfType is not null
+            ? [assemblyOfType.ContainingAssembly]
+            : GetSolutionAssemblies(compilation);
 
         var assignableToType = attribute.AssignableToTypeName is null
             ? null
@@ -49,7 +51,7 @@ public partial class DependencyInjectionGenerator
             excludeAssignableToType = excludeAssignableToType.Construct(typeArguments);
         }
 
-        foreach (var type in GetTypesFromAssembly(assembly))
+        foreach (var type in assemblies.SelectMany(GetTypesFromAssembly))
         {
             if (type.IsAbstract || type.IsStatic || !type.CanBeReferencedByName || type.TypeKind != TypeKind.Class)
                 continue;
@@ -71,7 +73,7 @@ public partial class DependencyInjectionGenerator
 
             if (excludeByTypeNameRegex != null && excludeByTypeNameRegex.IsMatch(type.ToDisplayString()))
                 continue;
-            
+
             if (excludeAssignableToType != null && IsAssignableTo(type, excludeAssignableToType, out _))
                 continue;
 
@@ -135,6 +137,16 @@ public partial class DependencyInjectionGenerator
 
         matchedType = null;
         return false;
+    }
+
+    private static IEnumerable<IAssemblySymbol> GetSolutionAssemblies(Compilation compilation)
+    {
+        yield return compilation.Assembly;
+
+        foreach (var reference in compilation.References.OfType<CompilationReference>())
+        {
+            yield return reference.Compilation.Assembly;
+        }
     }
 
     private static IEnumerable<INamedTypeSymbol> GetTypesFromAssembly(IAssemblySymbol assemblySymbol)
