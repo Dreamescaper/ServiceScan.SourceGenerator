@@ -17,7 +17,7 @@ internal static class GenerateAttributeSource
         {
             /// <summary>
             /// Set the assembly containing the given type as the source of types to register.
-            /// If not specified, the assembly containing the method with this attribute will be used.
+            /// If not specified, all referenced projects are scanned.
             /// </summary>
             public Type? FromAssemblyOf { get; set; }
         

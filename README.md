@@ -139,7 +139,7 @@ public static partial class ServiceCollectionExtensions
 `GenerateServiceRegistrations` attribute has the following properties:
 | Property | Description |
 | --- | --- |
-| **FromAssemblyOf** | Set the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
+| **FromAssemblyOf** | Set the assembly containing the given type as the source of types to register. If not specified, all referenced projects are scanned.|
 | **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type, unless `AsImplementedInterfaces` or `AsSelf` is set. |
 | **Lifetime** | Set the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
 | **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. |
