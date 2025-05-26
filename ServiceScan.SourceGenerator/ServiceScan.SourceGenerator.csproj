@@ -17,6 +17,7 @@
     <Authors>Oleksandr Liakhevych</Authors>
     <PackageTags>DependencyInjection;SourceGenerator</PackageTags>
     <Description>Types scanning source generator for Microsoft.Extensions.DependencyInjection</Description>
+    <PackageReleaseNotes>https://github.com/Dreamescaper/ServiceScan.SourceGenerator/releases</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
