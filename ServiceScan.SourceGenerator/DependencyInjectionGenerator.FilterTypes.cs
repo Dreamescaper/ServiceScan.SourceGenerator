@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
@@ -12,13 +13,7 @@ public partial class DependencyInjectionGenerator
     private static IEnumerable<(INamedTypeSymbol Type, INamedTypeSymbol? MatchedAssignableType)> FilterTypes
         (Compilation compilation, AttributeModel attribute, INamedTypeSymbol containingType)
     {
-        var assemblyOfType = attribute.AssemblyOfTypeName is null
-            ? null
-            : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName);
-
-        var assemblies = assemblyOfType is not null
-            ? [assemblyOfType.ContainingAssembly]
-            : GetSolutionAssemblies(compilation);
+        var assemblies = GetAssembliesToScan(compilation, attribute, containingType);
 
         var assignableToType = attribute.AssignableToTypeName is null
             ? null
@@ -139,6 +134,31 @@ public partial class DependencyInjectionGenerator
         return false;
     }
 
+    private static IEnumerable<IAssemblySymbol> GetAssembliesToScan(Compilation compilation, AttributeModel attribute, INamedTypeSymbol containingType)
+    {
+        var assemblyOfType = attribute.AssemblyOfTypeName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.AssemblyOfTypeName);
+
+        if (assemblyOfType is not null)
+        {
+            return [assemblyOfType.ContainingAssembly];
+        }
+
+        if (attribute.AssemblyNameFilter is not null)
+        {
+            var assemblyNameRegex = BuildWildcardRegex(attribute.AssemblyNameFilter);
+
+            return compilation.Assembly.Modules
+                .SelectMany(m => m.ReferencedAssemblySymbols)
+                .Concat([compilation.Assembly])
+                .Where(assembly => assemblyNameRegex.IsMatch(assembly.Name))
+                .ToArray();
+        }
+
+        return [containingType.ContainingAssembly];
+    }
+
     private static IEnumerable<IAssemblySymbol> GetSolutionAssemblies(Compilation compilation)
     {
         yield return compilation.Assembly;
@@ -177,6 +197,7 @@ public partial class DependencyInjectionGenerator
         }
     }
 
+    [return: NotNullIfNotNull(nameof(wildcard))]
     private static Regex? BuildWildcardRegex(string? wildcard)
     {
         return wildcard is null

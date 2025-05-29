@@ -20,6 +20,11 @@ internal static class GenerateAttributeSource
             /// If not specified, all referenced projects are scanned.
             /// </summary>
             public Type? FromAssemblyOf { get; set; }
+
+            /// <summary>
+            /// TODO
+            /// </summary>
+            public string? AssemblyNameFilter { get; set; }
         
             /// <summary>
             /// Set the type that the registered types must be assignable to.
