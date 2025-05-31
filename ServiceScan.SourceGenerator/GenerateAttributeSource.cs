@@ -17,13 +17,18 @@ internal static class GenerateAttributeSource
         {
             /// <summary>
             /// Set the assembly containing the given type as the source of types to register.
-            /// If not specified, all referenced projects are scanned.
+            /// If not specified, the assembly containing the method with this attribute will be used.
             /// </summary>
             public Type? FromAssemblyOf { get; set; }
-
+        
             /// <summary>
-            /// TODO
+            /// Set this value to filter scanned assemblies by assembly name.
+            /// It allows to apply an attribute to multiple assemblies.
+            /// For example, this allows to scan all assemblies from your solution.
+            /// You can use '*' wildcards. You can also use ',' to separate multiple filters.
             /// </summary>
+            /// <remarks>Be careful to include limited amount of assemblies, as it can affect build and editor performance.</remarks>
+            /// <example>My.Product.*</example>
             public string? AssemblyNameFilter { get; set; }
         
             /// <summary>
