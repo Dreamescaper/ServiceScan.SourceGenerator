@@ -25,6 +25,7 @@ internal static class GenerateAttributeSource
             /// Set this value to filter scanned assemblies by assembly name.
             /// It allows to apply an attribute to multiple assemblies.
             /// For example, this allows to scan all assemblies from your solution.
+            /// This option is incompatible with <see cref="FromAssemblyOf"/>.
             /// You can use '*' wildcards. You can also use ',' to separate multiple filters.
             /// </summary>
             /// <remarks>Be careful to include limited amount of assemblies, as it can affect build and editor performance.</remarks>

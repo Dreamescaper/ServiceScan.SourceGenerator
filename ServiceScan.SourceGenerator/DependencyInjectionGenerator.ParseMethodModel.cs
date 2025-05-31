@@ -30,6 +30,9 @@ public partial class DependencyInjectionGenerator
             if (hasCustomHandlers && attribute.CustomHandler == null)
                 return Diagnostic.Create(CantMixRegularAndCustomHandlerRegistrations, attribute.Location);
 
+            if (attribute.AssemblyOfTypeName != null && attribute.AssemblyNameFilter != null)
+                return Diagnostic.Create(CantUseBothFromAssemblyOfAndAssemblyNameFilter, attribute.Location);
+
             if (attribute.KeySelector != null)
             {
                 var keySelectorMethod = method.ContainingType.GetMembers().OfType<IMethodSymbol>()
