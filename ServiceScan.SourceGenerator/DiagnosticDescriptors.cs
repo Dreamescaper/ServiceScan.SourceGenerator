@@ -73,4 +73,11 @@ public static class DiagnosticDescriptors
         "Usage",
         DiagnosticSeverity.Error,
         true);
+
+    public static readonly DiagnosticDescriptor CantUseBothFromAssemblyOfAndAssemblyNameFilter = new("DI0012",
+        "Only one assembly selection criteria allowed",
+        "It is not allowed to use both FromAssemblyOf and AssemblyNameFilter in the same attribute",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
 }

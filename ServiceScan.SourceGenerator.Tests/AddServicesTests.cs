@@ -60,30 +60,30 @@ public class AddServicesTests
     }
 
     [Fact]
-    public void AddServicesFromReferencedCompilationsByDefault()
+    public void AddServicesFromReferencedAssembliesByAssemblyNameFilter()
     {
         var coreCompilation = CreateCompilation(
             """
             namespace Core;
             public interface IService { }
             """)
-            .WithAssemblyName("Core");
+            .WithAssemblyName("MyProduct.Core");
 
         var implementation1Compilation = CreateCompilation(["""
             namespace Module1;
             public class MyService1 : Core.IService { }
             """],
             [coreCompilation])
-            .WithAssemblyName("Module1");
+            .WithAssemblyName("MyProduct.Module1");
 
         var implementation2Compilation = CreateCompilation(["""
             namespace Module2;
             public class MyService2 : Core.IService { }
             """],
             [coreCompilation])
-            .WithAssemblyName("Module2");
+            .WithAssemblyName("MyProduct.Module2");
 
-        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(Core.IService), Lifetime = ServiceLifetime.Scoped)]";
+        var attribute = """[GenerateServiceRegistrations(AssignableTo = typeof(Core.IService), Lifetime = ServiceLifetime.Scoped, AssemblyNameFilter="MyProduct.*")]""";
         var registrationsCompilation = CreateCompilation(
             [Sources.MethodWithAttribute(attribute)],
             [coreCompilation, implementation1Compilation, implementation2Compilation]);

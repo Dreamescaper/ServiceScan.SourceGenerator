@@ -7,6 +7,7 @@ enum KeySelectorType { Method, GenericMethod, TypeMember };
 
 record AttributeModel(
     string? AssignableToTypeName,
+    string? AssemblyNameFilter,
     EquatableArray<string>? AssignableToGenericArguments,
     string? AssemblyOfTypeName,
     string Lifetime,
@@ -29,6 +30,7 @@ record AttributeModel(
     public static AttributeModel Create(AttributeData attribute, IMethodSymbol method)
     {
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
+        var assemblyNameFilter = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssemblyNameFilter").Value.Value as string;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
         var asImplementedInterfaces = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsImplementedInterfaces").Value.Value is true;
         var asSelf = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AsSelf").Value.Value is true;
@@ -63,6 +65,9 @@ record AttributeModel(
         if (string.IsNullOrWhiteSpace(excludeByTypeName))
             excludeByTypeName = null;
 
+        if (string.IsNullOrWhiteSpace(assemblyNameFilter))
+            assemblyNameFilter = null;
+
         var attributeFilterTypeName = attributeFilterType?.ToFullMetadataName();
         var excludeByAttributeTypeName = excludeByAttributeType?.ToFullMetadataName();
         var assemblyOfTypeName = assemblyType?.ToFullMetadataName();
@@ -92,6 +97,7 @@ record AttributeModel(
 
         return new(
             assignableToTypeName,
+            assemblyNameFilter,
             assignableToGenericArguments,
             assemblyOfTypeName,
             lifetime,
