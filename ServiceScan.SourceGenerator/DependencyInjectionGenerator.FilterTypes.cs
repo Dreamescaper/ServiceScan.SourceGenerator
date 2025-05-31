@@ -149,11 +149,9 @@ public partial class DependencyInjectionGenerator
         {
             var assemblyNameRegex = BuildWildcardRegex(attribute.AssemblyNameFilter);
 
-            return compilation.Assembly.Modules
-                .SelectMany(m => m.ReferencedAssemblySymbols)
-                .Concat([compilation.Assembly])
-                .Where(assembly => assemblyNameRegex.IsMatch(assembly.Name))
-                .ToArray();
+            return new[] { compilation.Assembly }
+                .Concat(compilation.SourceModule.ReferencedAssemblySymbols)
+                .Where(assembly => assemblyNameRegex.IsMatch(assembly.Name));
         }
 
         return [containingType.ContainingAssembly];
