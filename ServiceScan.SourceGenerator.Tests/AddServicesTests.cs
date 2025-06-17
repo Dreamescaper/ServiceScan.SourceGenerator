@@ -864,7 +864,7 @@ public class AddServicesTests
     }
 
     [Fact]
-    public void AddServicesBothAsSelfAndAsImplementedInterfaces_IntefacesAreForwaredToSelfRegistration()
+    public void AddServicesBothAsSelfAndAsImplementedInterfaces_InterfacesAreForwardedToSelfRegistration()
     {
         var attribute = """
             [GenerateServiceRegistrations(
