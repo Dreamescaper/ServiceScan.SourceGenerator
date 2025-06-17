@@ -10,7 +10,7 @@ namespace ServiceScan.SourceGenerator;
 
 public partial class DependencyInjectionGenerator
 {
-    private static IEnumerable<(INamedTypeSymbol Type, INamedTypeSymbol? MatchedAssignableType)> FilterTypes
+    private static IEnumerable<(INamedTypeSymbol Type, INamedTypeSymbol[]? MatchedAssignableTypes)> FilterTypes
         (Compilation compilation, AttributeModel attribute, INamedTypeSymbol containingType)
     {
         var assemblies = GetAssembliesToScan(compilation, attribute, containingType);
@@ -72,19 +72,19 @@ public partial class DependencyInjectionGenerator
             if (excludeAssignableToType != null && IsAssignableTo(type, excludeAssignableToType, out _))
                 continue;
 
-            INamedTypeSymbol matchedType = null;
-            if (assignableToType != null && !IsAssignableTo(type, assignableToType, out matchedType))
+            INamedTypeSymbol[] matchedTypes = null;
+            if (assignableToType != null && !IsAssignableTo(type, assignableToType, out matchedTypes))
                 continue;
 
-            yield return (type, matchedType);
+            yield return (type, matchedTypes);
         }
     }
 
-    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol? matchedType)
+    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol assignableTo, out INamedTypeSymbol[]? matchedTypes)
     {
         if (SymbolEqualityComparer.Default.Equals(type, assignableTo))
         {
-            matchedType = type;
+            matchedTypes = [type];
             return true;
         }
 
@@ -92,9 +92,11 @@ public partial class DependencyInjectionGenerator
         {
             if (assignableTo.TypeKind == TypeKind.Interface)
             {
-                var matchingInterface = type.AllInterfaces.FirstOrDefault(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, assignableTo));
-                matchedType = matchingInterface;
-                return matchingInterface != null;
+                matchedTypes = type.AllInterfaces
+                    .Where(i => i.IsGenericType && SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, assignableTo))
+                    .ToArray();
+
+                return matchedTypes.Length > 0;
             }
 
             var baseType = type.BaseType;
@@ -102,7 +104,7 @@ public partial class DependencyInjectionGenerator
             {
                 if (baseType.IsGenericType && SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, assignableTo))
                 {
-                    matchedType = baseType;
+                    matchedTypes = [baseType];
                     return true;
                 }
 
@@ -113,7 +115,7 @@ public partial class DependencyInjectionGenerator
         {
             if (assignableTo.TypeKind == TypeKind.Interface)
             {
-                matchedType = assignableTo;
+                matchedTypes = [assignableTo];
                 return type.AllInterfaces.Contains(assignableTo, SymbolEqualityComparer.Default);
             }
 
@@ -122,7 +124,7 @@ public partial class DependencyInjectionGenerator
             {
                 if (SymbolEqualityComparer.Default.Equals(baseType, assignableTo))
                 {
-                    matchedType = baseType;
+                    matchedTypes = [baseType];
                     return true;
                 }
 
@@ -130,7 +132,7 @@ public partial class DependencyInjectionGenerator
             }
         }
 
-        matchedType = null;
+        matchedTypes = null;
         return false;
     }
 

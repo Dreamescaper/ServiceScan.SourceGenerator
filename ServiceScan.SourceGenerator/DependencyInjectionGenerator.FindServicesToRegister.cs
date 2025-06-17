@@ -31,7 +31,7 @@ public partial class DependencyInjectionGenerator
         {
             bool typesFound = false;
 
-            foreach (var (implementationType, matchedType) in FilterTypes(compilation, attribute, containingType))
+            foreach (var (implementationType, matchedTypes) in FilterTypes(compilation, attribute, containingType))
             {
                 typesFound = true;
 
@@ -46,7 +46,7 @@ public partial class DependencyInjectionGenerator
                         (true, true) => new[] { implementationType }.Concat(GetSuitableInterfaces(implementationType)),
                         (false, true) => GetSuitableInterfaces(implementationType),
                         (true, false) => [implementationType],
-                        _ => [matchedType ?? implementationType]
+                        _ => matchedTypes ?? [implementationType]
                     };
 
                     foreach (var serviceType in serviceTypes)

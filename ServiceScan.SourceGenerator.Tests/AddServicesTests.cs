@@ -188,6 +188,62 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddServicesAssignableToOpenGenericInterface_WithMultipleInterfaces()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<>))]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService<T> { }
+            public interface IOtherInterface { }
+            public class MyIntAndStringService : IService<int>, IService<string>, IOtherInterface { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntAndStringService>()
+                .AddTransient<global::GeneratorTests.IService<string>, global::GeneratorTests.MyIntAndStringService>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void AddServicesAssignableToOpenGenericInterface_WithMultipleInterfaces_AsSelfAndAsImplementedInterfaces()
+    {
+        var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<>), AsSelf = true, AsImplementedInterfaces = true, Lifetime = ServiceLifetime.Singleton)]";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public interface IService<T> { }
+            public class MyIntAndStringService : IService<int>, IService<string> { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddSingleton<global::GeneratorTests.MyIntAndStringService, global::GeneratorTests.MyIntAndStringService>()
+                .AddSingleton<global::GeneratorTests.IService<int>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>())
+                .AddSingleton<global::GeneratorTests.IService<string>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>());
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void AddServicesAssignableToClosedGenericInterface()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<int>))]";
@@ -808,7 +864,7 @@ public class AddServicesTests
     }
 
     [Fact]
-    public void AddServicesBothAsSelfAndAsImplementedInterfaces()
+    public void AddServicesBothAsSelfAndAsImplementedInterfaces_InterfacesAreForwardedToSelfRegistration()
     {
         var attribute = """
             [GenerateServiceRegistrations(
