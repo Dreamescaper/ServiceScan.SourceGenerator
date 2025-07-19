@@ -956,6 +956,7 @@ public class AddServicesTests
             public class ParentType2
             {
                 public class MyService1 : IService { }
+                private class NestedPrivateService : IService { } // Shouldn't be added as non-accessible
             }
             """);
 
