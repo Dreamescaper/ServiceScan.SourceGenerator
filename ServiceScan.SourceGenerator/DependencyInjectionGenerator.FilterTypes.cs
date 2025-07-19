@@ -13,6 +13,9 @@ public partial class DependencyInjectionGenerator
     private static IEnumerable<(INamedTypeSymbol Type, INamedTypeSymbol[]? MatchedAssignableTypes)> FilterTypes
         (Compilation compilation, AttributeModel attribute, INamedTypeSymbol containingType)
     {
+        var semanticModel = compilation.GetSemanticModel(attribute.Location.SourceTree);
+        var position = attribute.Location.SourceSpan.Start;
+
         var assemblies = GetAssembliesToScan(compilation, attribute, containingType);
 
         var assignableToType = attribute.AssignableToTypeName is null
@@ -74,6 +77,9 @@ public partial class DependencyInjectionGenerator
 
             INamedTypeSymbol[] matchedTypes = null;
             if (assignableToType != null && !IsAssignableTo(type, assignableToType, out matchedTypes))
+                continue;
+
+            if (!semanticModel.IsAccessible(position, type))
                 continue;
 
             yield return (type, matchedTypes);

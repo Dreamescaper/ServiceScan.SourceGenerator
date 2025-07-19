@@ -15,11 +15,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     {
         context.RegisterPostInitializationOutput(context =>
         {
-            context.AddSource("ServiceScanAttributes.Generated.cs", SourceText.From(GenerateAttributeSource.Source, Encoding.UTF8));
+            context.AddSource("ServiceScanAttributes.Generated.cs", SourceText.From(GenerateAttributeInfo.Source, Encoding.UTF8));
         });
 
         var methodProvider = context.SyntaxProvider.ForAttributeWithMetadataName(
-                "ServiceScan.SourceGenerator.GenerateServiceRegistrationsAttribute",
+                GenerateAttributeInfo.MetadataName,
                 predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax methodSyntax,
                 transform: static (context, ct) => ParseRegisterMethodModel(context))
             .Where(method => method != null);

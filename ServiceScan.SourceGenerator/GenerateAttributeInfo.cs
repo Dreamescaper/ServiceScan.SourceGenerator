@@ -1,8 +1,10 @@
 ﻿namespace ServiceScan.SourceGenerator;
 
-internal static class GenerateAttributeSource
+internal static class GenerateAttributeInfo
 {
-    public static string Source => """
+    public const string MetadataName = "ServiceScan.SourceGenerator.GenerateServiceRegistrationsAttribute";
+
+    public const string Source = """
         #nullable enable
 
         using System;
