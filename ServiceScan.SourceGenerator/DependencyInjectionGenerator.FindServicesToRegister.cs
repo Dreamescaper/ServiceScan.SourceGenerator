@@ -37,13 +37,31 @@ public partial class DependencyInjectionGenerator
 
                 if (attribute.CustomHandler != null)
                 {
-                    customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                    // If CustomHandler method has multiple type parameters, which are resolvable from the first one - we try to provide them.
+                    // e.g. ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder) where T : IEntityTypeConfiguration<TEntity>
+                    if (attribute.CustomHandlerTypeParametersCount > 1 && matchedTypes != null)
+                    {
+                        foreach (var matchedType in matchedTypes)
+                        {
+                            EquatableArray<string> typeArguments =
+                                [
+                                    implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                    .. matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                                ];
+
+                            customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, typeArguments));
+                        }
+                    }
+                    else
+                    {
+                        customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, [implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)]));
+                    }
                 }
                 else
                 {
                     var serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
                     {
-                        (true, true) => new[] { implementationType }.Concat(GetSuitableInterfaces(implementationType)),
+                        (true, true) => [implementationType, .. GetSuitableInterfaces(implementationType)],
                         (false, true) => GetSuitableInterfaces(implementationType),
                         (true, false) => [implementationType],
                         _ => matchedTypes ?? [implementationType]
