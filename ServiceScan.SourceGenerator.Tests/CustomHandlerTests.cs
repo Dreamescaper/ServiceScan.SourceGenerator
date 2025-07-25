@@ -346,7 +346,7 @@ public class CustomHandlerTests
                 void Configure(EntityTypeBuilder<TEntity> builder);
             }
 
-            public class EntityTypeBuilder<TEntity> : where TEntity : class;
+            public class EntityTypeBuilder<TEntity> where TEntity : class;
 
             public class ModelBuilder
             {
