@@ -7,6 +7,7 @@ enum KeySelectorType { Method, GenericMethod, TypeMember };
 
 record AttributeModel(
     string? AssignableToTypeName,
+    int AssignableToTypeParametersCount,
     string? AssemblyNameFilter,
     EquatableArray<string>? AssignableToGenericArguments,
     string? AssemblyOfTypeName,
@@ -20,6 +21,7 @@ record AttributeModel(
     string? KeySelector,
     KeySelectorType? KeySelectorType,
     string? CustomHandler,
+    int CustomHandlerTypeParametersCount,
     bool AsImplementedInterfaces,
     bool AsSelf,
     Location Location,
@@ -42,6 +44,8 @@ record AttributeModel(
         var keySelector = attribute.NamedArguments.FirstOrDefault(a => a.Key == "KeySelector").Value.Value as string;
         var customHandler = attribute.NamedArguments.FirstOrDefault(a => a.Key == "CustomHandler").Value.Value as string;
 
+        var assignableToTypeParametersCount = assignableTo?.TypeParameters.Length ?? 0;
+
         KeySelectorType? keySelectorType = null;
         if (keySelector != null)
         {
@@ -57,6 +61,16 @@ record AttributeModel(
             {
                 keySelectorType = Model.KeySelectorType.TypeMember;
             }
+        }
+
+        var customHandlerGenericParameters = 0;
+        if (customHandler != null)
+        {
+            var customHandlerMethod = method.ContainingType.GetMembers()
+                .OfType<IMethodSymbol>()
+                .FirstOrDefault(m => m.IsStatic && m.Name == customHandler);
+
+            customHandlerGenericParameters = customHandlerMethod?.TypeParameters.Length ?? 0;
         }
 
         if (string.IsNullOrWhiteSpace(typeNameFilter))
@@ -97,6 +111,7 @@ record AttributeModel(
 
         return new(
             assignableToTypeName,
+            assignableToTypeParametersCount,
             assemblyNameFilter,
             assignableToGenericArguments,
             assemblyOfTypeName,
@@ -110,6 +125,7 @@ record AttributeModel(
             keySelector,
             keySelectorType,
             customHandler,
+            customHandlerGenericParameters,
             asImplementedInterfaces,
             asSelf,
             location,

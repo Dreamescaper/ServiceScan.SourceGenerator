@@ -108,7 +108,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     private static string GenerateCustomHandlingSource(MethodModel method, EquatableArray<CustomHandlerModel> customHandlers)
     {
         var invocations = string.Join("\n", customHandlers.Select(h =>
-            $"        {h.HandlerMethodName}<{h.TypeName}>({string.Join(", ", method.Parameters.Select(p => p.Name))});"));
+        {
+            var genericArguments = string.Join(", ", h.TypeArguments);
+            var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
+            return $"        {h.HandlerMethodName}<{genericArguments}>({arguments});";
+        }));
 
         var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
         var parameters = string.Join(",", method.Parameters.Select((p, i) =>

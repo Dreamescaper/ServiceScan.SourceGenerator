@@ -133,6 +133,24 @@ public static partial class ServiceCollectionExtensions
 }
 ```
 
+### Apply EF Core IEntityTypeConfiguration types
+
+```csharp
+public static partial class ModelBuilderExtensions
+{
+    [GenerateServiceRegistrations(AssignableTo = typeof(IEntityTypeConfiguration<>), CustomHandler = nameof(ApplyConfiguration))]
+    public static partial ModelBuilder ApplyEntityConfigurations(this ModelBuilder modelBuilder);
+
+    private static void ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder)
+        where T : IEntityTypeConfiguration<TEntity>, new()
+        where TEntity : class
+    {
+        modelBuilder.ApplyConfiguration(new T());
+    }
+}
+```
+
+
 
 ## Parameters
 

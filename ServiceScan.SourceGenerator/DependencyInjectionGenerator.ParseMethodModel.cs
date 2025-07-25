@@ -69,6 +69,15 @@ public partial class DependencyInjectionGenerator
 
                 if (!typesMatch)
                     return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+
+                // If CustomHandler has more than 1 type parameters, we try to resolve them from 
+                // matched assignableTo type arguments.
+                // e.g. ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder) where T : IEntityTypeConfiguration<TEntity>
+                if (customHandlerMethod.TypeParameters.Length > 1
+                    && customHandlerMethod.TypeParameters.Length != attribute.AssignableToTypeParametersCount + 1)
+                {
+                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+                }
             }
 
             if (attributeData[i].HasErrors)

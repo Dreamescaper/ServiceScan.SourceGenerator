@@ -268,7 +268,6 @@ public class CustomHandlerTests
         Assert.Equal(expected, results.GeneratedTrees[1].ToString());
     }
 
-
     [Fact]
     public void AddMultipleCustomHandlerAttributesWithSameCustomHandler()
     {
@@ -313,6 +312,85 @@ public class CustomHandlerTests
                 {
                     HandleType<global::GeneratorTests.MyService1>();
                     HandleType<global::GeneratorTests.MyService2>();
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void ResolveCustomHandlerGenericArguments()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ModelBuilderExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IEntityTypeConfiguration<>), CustomHandler = nameof(ApplyConfiguration))]
+                public static partial ModelBuilder ApplyEntityConfigurations(this ModelBuilder modelBuilder);
+
+                private static void ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder)
+                    where T : IEntityTypeConfiguration<TEntity>, new()
+                    where TEntity : class
+                {
+                    modelBuilder.ApplyConfiguration(new T());
+                }
+            }
+            """;
+
+        var infra = """
+            public interface IEntityTypeConfiguration<TEntity> where TEntity : class
+            {
+                void Configure(EntityTypeBuilder<TEntity> builder);
+            }
+
+            public class EntityTypeBuilder<TEntity> where TEntity : class;
+
+            public class ModelBuilder
+            {
+                public ModelBuilder ApplyConfiguration<TEntity>(IEntityTypeConfiguration<TEntity> configuration) where TEntity : class
+                {
+                    return this;
+                }
+            }
+            """;
+
+        var configurations = """
+            namespace GeneratorTests;
+            
+            public class EntityA;
+            public class EntityB;
+
+            public class EntityAConfiguration : IEntityTypeConfiguration<EntityA>
+            {
+                public void Configure(EntityTypeBuilder<EntityA> builder) { }
+            }
+
+            public class EntityBConfiguration : IEntityTypeConfiguration<EntityB>
+            {
+                public void Configure(EntityTypeBuilder<EntityB> builder) { }
+            }
+            """;
+
+        var compilation = CreateCompilation(source, infra, configurations);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public static partial class ModelBuilderExtensions
+            {
+                public static partial global::ModelBuilder ApplyEntityConfigurations(this global::ModelBuilder modelBuilder)
+                {
+                    ApplyConfiguration<global::GeneratorTests.EntityAConfiguration, global::GeneratorTests.EntityA>(modelBuilder);
+                    ApplyConfiguration<global::GeneratorTests.EntityBConfiguration, global::GeneratorTests.EntityB>(modelBuilder);
+                    return modelBuilder;
                 }
             }
             """;
