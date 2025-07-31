@@ -54,7 +54,7 @@ public partial class DependencyInjectionGenerator
             if (attribute.CustomHandler != null)
             {
                 var customHandlerMethod = method.ContainingType.GetMembers().OfType<IMethodSymbol>()
-                    .FirstOrDefault(m => m.IsStatic && m.Name == attribute.CustomHandler);
+                    .FirstOrDefault(m => m.Name == attribute.CustomHandler);
 
                 if (customHandlerMethod is null)
                     return Diagnostic.Create(CustomHandlerMethodNotFound, attribute.Location);

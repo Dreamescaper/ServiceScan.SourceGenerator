@@ -397,6 +397,53 @@ public class CustomHandlerTests
         Assert.Equal(expected, results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void UseInstanceCustomHandlerMethod()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IService), CustomHandler = nameof(HandleType))]
+                public partial void ProcessServices();
+
+                private void HandleType<T>() => System.Console.WriteLine(typeof(T).Name);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public partial class ServicesExtensions
+            {
+                public partial void ProcessServices()
+                {
+                    HandleType<global::GeneratorTests.MyService1>();
+                    HandleType<global::GeneratorTests.MyService2>();
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
 
     private static Compilation CreateCompilation(params string[] source)
     {
