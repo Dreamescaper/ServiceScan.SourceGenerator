@@ -62,7 +62,7 @@ public static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor CustomHandlerMethodNotFound = new("DI0012",
         "Provided CustomHandler method is not found",
-        "CustomHandler parameter should point to a static method in the class",
+        "CustomHandler parameter should point to a method in the class",
         "Usage",
         DiagnosticSeverity.Error,
         true);
