@@ -109,9 +109,17 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     {
         var invocations = string.Join("\n", customHandlers.Select(h =>
         {
-            var genericArguments = string.Join(", ", h.TypeArguments);
-            var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
-            return $"        {h.HandlerMethodName}<{genericArguments}>({arguments});";
+            if (h.CustomHandlerType == CustomHandlerType.Method)
+            {
+                var genericArguments = string.Join(", ", h.TypeArguments);
+                var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
+                return $"        {h.HandlerMethodName}<{genericArguments}>({arguments});";
+            }
+            else
+            {
+                var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
+                return $"        {h.TypeName}.{h.HandlerMethodName}({arguments});";
+            }
         }));
 
         var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";

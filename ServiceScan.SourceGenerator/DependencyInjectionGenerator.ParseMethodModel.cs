@@ -56,27 +56,27 @@ public partial class DependencyInjectionGenerator
                 var customHandlerMethod = method.ContainingType.GetMembers().OfType<IMethodSymbol>()
                     .FirstOrDefault(m => m.Name == attribute.CustomHandler);
 
-                if (customHandlerMethod is null)
-                    return Diagnostic.Create(CustomHandlerMethodNotFound, attribute.Location);
-
-                if (!customHandlerMethod.IsGenericMethod)
-                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
-
-                var typesMatch = Enumerable.SequenceEqual(
-                    method.Parameters.Select(p => p.Type),
-                    customHandlerMethod.Parameters.Select(p => p.Type),
-                    SymbolEqualityComparer.Default);
-
-                if (!typesMatch)
-                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
-
-                // If CustomHandler has more than 1 type parameters, we try to resolve them from 
-                // matched assignableTo type arguments.
-                // e.g. ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder) where T : IEntityTypeConfiguration<TEntity>
-                if (customHandlerMethod.TypeParameters.Length > 1
-                    && customHandlerMethod.TypeParameters.Length != attribute.AssignableToTypeParametersCount + 1)
+                if (customHandlerMethod != null)
                 {
-                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+                    if (!customHandlerMethod.IsGenericMethod)
+                        return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+
+                    var typesMatch = Enumerable.SequenceEqual(
+                        method.Parameters.Select(p => p.Type),
+                        customHandlerMethod.Parameters.Select(p => p.Type),
+                        SymbolEqualityComparer.Default);
+
+                    if (!typesMatch)
+                        return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+
+                    // If CustomHandler has more than 1 type parameters, we try to resolve them from 
+                    // matched assignableTo type arguments.
+                    // e.g. ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder) where T : IEntityTypeConfiguration<TEntity>
+                    if (customHandlerMethod.TypeParameters.Length > 1
+                        && customHandlerMethod.TypeParameters.Length != attribute.AssignableToTypeParametersCount + 1)
+                    {
+                        return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+                    }
                 }
             }
 

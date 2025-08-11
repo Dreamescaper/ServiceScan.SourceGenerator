@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 namespace ServiceScan.SourceGenerator.Model;
 
 enum KeySelectorType { Method, GenericMethod, TypeMember };
+enum CustomHandlerType { Method, TypeMethod };
 
 record AttributeModel(
     string? AssignableToTypeName,
@@ -21,7 +22,8 @@ record AttributeModel(
     string? KeySelector,
     KeySelectorType? KeySelectorType,
     string? CustomHandler,
-    int CustomHandlerTypeParametersCount,
+    CustomHandlerType? CustomHandlerType,
+    int CustomHandlerMethodTypeParametersCount,
     bool AsImplementedInterfaces,
     bool AsSelf,
     Location Location,
@@ -63,13 +65,15 @@ record AttributeModel(
             }
         }
 
+        CustomHandlerType? customHandlerType = null;
         var customHandlerGenericParameters = 0;
         if (customHandler != null)
         {
             var customHandlerMethod = method.ContainingType.GetMembers()
                 .OfType<IMethodSymbol>()
-                .FirstOrDefault(m => m.IsStatic && m.Name == customHandler);
+                .FirstOrDefault(m => m.Name == customHandler);
 
+            customHandlerType = customHandlerMethod != null ? Model.CustomHandlerType.Method : Model.CustomHandlerType.TypeMethod;
             customHandlerGenericParameters = customHandlerMethod?.TypeParameters.Length ?? 0;
         }
 
@@ -125,6 +129,7 @@ record AttributeModel(
             keySelector,
             keySelectorType,
             customHandler,
+            customHandlerType,
             customHandlerGenericParameters,
             asImplementedInterfaces,
             asSelf,

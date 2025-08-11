@@ -445,6 +445,113 @@ public class CustomHandlerTests
         Assert.Equal(expected, results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void UseStaticMethodFromMatchedClassAsCustomHandler_WithoutParameters()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IService), CustomHandler = "Handler"))]
+                public partial void ProcessServices();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+
+            public class MyService1 : IService 
+            {
+                public static void Handler() { }
+            }
+            
+            public class MyService2 : IService 
+            {
+                public static void Handler() { }
+            }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public partial class ServicesExtensions
+            {
+                public partial void ProcessServices()
+                {
+                    global::GeneratorTests.MyService1.Handler();
+                    global::GeneratorTests.MyService2.Handler();
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void UseStaticMethodFromMatchedStaticClassAsCustomHandler_WithParameters()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            using Microsoft.Extensions.DependencyInjection;
+            
+            namespace GeneratorTests;
+                    
+            public partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(TypeNameFilter = "*StaticService", CustomHandler = "Handler"))]
+                public partial void ProcessServices(IServiceCollection services);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public static class FirstStaticService : IService 
+            {
+                public static void Handler(IServiceCollection services) { }
+            }
+            
+            public static class SecondStaticService : IService 
+            {
+                public static void Handler(IServiceCollection services) { }
+            }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public partial class ServicesExtensions
+            {
+                public partial void ProcessServices( global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+                {
+                    global::GeneratorTests.FirstStaticService.Handler(services);
+                    global::GeneratorTests.SecondStaticService.Handler(services);
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;

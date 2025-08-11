@@ -37,24 +37,34 @@ public partial class DependencyInjectionGenerator
 
                 if (attribute.CustomHandler != null)
                 {
+                    var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
                     // If CustomHandler method has multiple type parameters, which are resolvable from the first one - we try to provide them.
                     // e.g. ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder) where T : IEntityTypeConfiguration<TEntity>
-                    if (attribute.CustomHandlerTypeParametersCount > 1 && matchedTypes != null)
+                    if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
                     {
                         foreach (var matchedType in matchedTypes)
                         {
                             EquatableArray<string> typeArguments =
                                 [
-                                    implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                    implementationTypeName,
                                     .. matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
                                 ];
 
-                            customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, typeArguments));
+                            customHandlers.Add(new CustomHandlerModel(
+                                attribute.CustomHandlerType.Value,
+                                attribute.CustomHandler,
+                                implementationTypeName,
+                                typeArguments));
                         }
                     }
                     else
                     {
-                        customHandlers.Add(new CustomHandlerModel(attribute.CustomHandler, [implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)]));
+                        customHandlers.Add(new CustomHandlerModel(
+                            attribute.CustomHandlerType.Value,
+                            attribute.CustomHandler,
+                            implementationTypeName,
+                            [implementationTypeName]));
                     }
                 }
                 else

@@ -51,7 +51,11 @@ public partial class DependencyInjectionGenerator
 
         foreach (var type in assemblies.SelectMany(GetTypesFromAssembly))
         {
-            if (type.IsAbstract || type.IsStatic || !type.CanBeReferencedByName || type.TypeKind != TypeKind.Class)
+            if (type.IsAbstract || !type.CanBeReferencedByName || type.TypeKind != TypeKind.Class)
+                continue;
+
+            // Static types are allowed for custom handlers (with type method)
+            if (type.IsStatic && attribute.CustomHandlerType != CustomHandlerType.TypeMethod)
                 continue;
 
             if (attributeFilterType != null)
