@@ -10,5 +10,7 @@ record ServiceRegistrationModel(
     KeySelectorType? KeySelectorType);
 
 record CustomHandlerModel(
+    CustomHandlerType CustomHandlerType,
     string HandlerMethodName,
+    string TypeName,
     EquatableArray<string> TypeArguments);
