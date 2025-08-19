@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using ServiceScan.SourceGenerator.Extensions;
 using ServiceScan.SourceGenerator.Model;
 using static ServiceScan.SourceGenerator.DiagnosticDescriptors;
 
@@ -16,14 +17,12 @@ public partial class DependencyInjectionGenerator
         if (!method.IsPartialDefinition)
             return Diagnostic.Create(NotPartialDefinition, method.Locations[0]);
 
-        var attributeData = context.Attributes.Select(a => AttributeModel.Create(a, method)).ToArray();
+        var position = context.TargetNode.SpanStart;
+        var attributeData = context.Attributes.Select(a => AttributeModel.Create(a, method, context.SemanticModel)).ToArray();
         var hasCustomHandlers = attributeData.Any(a => a.CustomHandler != null);
 
-        for (var i = 0; i < context.Attributes.Length; i++)
+        foreach (var attribute in attributeData)
         {
-            var attribute = AttributeModel.Create(context.Attributes[i], method);
-            attributeData[i] = attribute;
-
             if (!attribute.HasSearchCriteria)
                 return Diagnostic.Create(MissingSearchCriteria, attribute.Location);
 
@@ -35,8 +34,7 @@ public partial class DependencyInjectionGenerator
 
             if (attribute.KeySelector != null)
             {
-                var keySelectorMethod = method.ContainingType.GetMembers().OfType<IMethodSymbol>()
-                    .FirstOrDefault(m => m.IsStatic && m.Name == attribute.KeySelector);
+                var keySelectorMethod = method.ContainingType.GetMethod(attribute.KeySelector, context.SemanticModel, position, isStatic: true);
 
                 if (keySelectorMethod is not null)
                 {
@@ -53,8 +51,7 @@ public partial class DependencyInjectionGenerator
 
             if (attribute.CustomHandler != null)
             {
-                var customHandlerMethod = method.ContainingType.GetMembers().OfType<IMethodSymbol>()
-                    .FirstOrDefault(m => m.Name == attribute.CustomHandler);
+                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
 
                 if (customHandlerMethod != null)
                 {
@@ -80,7 +77,7 @@ public partial class DependencyInjectionGenerator
                 }
             }
 
-            if (attributeData[i].HasErrors)
+            if (attribute.HasErrors)
                 return null;
         }
 

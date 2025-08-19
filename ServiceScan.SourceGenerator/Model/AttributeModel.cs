@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Microsoft.CodeAnalysis;
+using ServiceScan.SourceGenerator.Extensions;
 
 namespace ServiceScan.SourceGenerator.Model;
 
@@ -31,8 +32,10 @@ record AttributeModel(
 {
     public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null || AttributeFilterTypeName != null;
 
-    public static AttributeModel Create(AttributeData attribute, IMethodSymbol method)
+    public static AttributeModel Create(AttributeData attribute, IMethodSymbol method, SemanticModel semanticModel)
     {
+        var position = attribute.ApplicationSyntaxReference?.Span.Start ?? 0;
+
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assemblyNameFilter = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssemblyNameFilter").Value.Value as string;
         var assignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssignableTo").Value.Value as INamedTypeSymbol;
@@ -51,9 +54,7 @@ record AttributeModel(
         KeySelectorType? keySelectorType = null;
         if (keySelector != null)
         {
-            var keySelectorMethod = method.ContainingType.GetMembers()
-                .OfType<IMethodSymbol>()
-                .FirstOrDefault(m => m.IsStatic && m.Name == keySelector);
+            var keySelectorMethod = method.ContainingType.GetMethod(keySelector, semanticModel, position, isStatic: true);
 
             if (keySelectorMethod != null)
             {
@@ -69,9 +70,7 @@ record AttributeModel(
         var customHandlerGenericParameters = 0;
         if (customHandler != null)
         {
-            var customHandlerMethod = method.ContainingType.GetMembers()
-                .OfType<IMethodSymbol>()
-                .FirstOrDefault(m => m.Name == customHandler);
+            var customHandlerMethod = method.ContainingType.GetMethod(customHandler, semanticModel, position);
 
             customHandlerType = customHandlerMethod != null ? Model.CustomHandlerType.Method : Model.CustomHandlerType.TypeMethod;
             customHandlerGenericParameters = customHandlerMethod?.TypeParameters.Length ?? 0;
