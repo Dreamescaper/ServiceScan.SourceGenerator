@@ -60,13 +60,6 @@ public static class DiagnosticDescriptors
         DiagnosticSeverity.Error,
         true);
 
-    public static readonly DiagnosticDescriptor CustomHandlerMethodNotFound = new("DI0012",
-        "Provided CustomHandler method is not found",
-        "CustomHandler parameter should point to a method in the class",
-        "Usage",
-        DiagnosticSeverity.Error,
-        true);
-
     public static readonly DiagnosticDescriptor CustomHandlerMethodHasIncorrectSignature = new("DI0011",
         "Provided CustomHandler method has incorrect signature",
         "CustomHandler method must be generic, and must have the same parameters as the method with the attribute",
