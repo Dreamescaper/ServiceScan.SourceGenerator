@@ -93,13 +93,8 @@ public class HelloWorldEndpoint : IEndpoint
 
 public static partial class ServiceCollectionExtensions
 {
-    [GenerateServiceRegistrations(AssignableTo = typeof(IEndpoint), CustomHandler = nameof(MapEndpoint))]
+    [GenerateServiceRegistrations(AssignableTo = typeof(IEndpoint), CustomHandler = nameof(IEndpoint.MapEndpoint))]
     public static partial IEndpointRouteBuilder MapEndpoints(this IEndpointRouteBuilder endpoints);
-
-    private static void MapEndpoint<T>(IEndpointRouteBuilder endpoints) where T : IEndpoint
-    {
-        T.MapEndpoint(endpoints);
-    }
 }
 ```
 
@@ -157,16 +152,16 @@ public static partial class ModelBuilderExtensions
 `GenerateServiceRegistrations` attribute has the following properties:
 | Property | Description |
 | --- | --- |
-| **FromAssemblyOf** | Set the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
-| **AssemblyNameFilter** | Set this value to filter scanned assemblies by assembly name. It allows to apply an attribute to multiple assemblies. For example, this allows to scan all assemblies from your solution. You can use '\*' wildcards. You can also use ',' to separate multiple filters. *Be careful to include limited amount of assemblies, as it can affect build and editor performance.* |
-| **AssignableTo** | Set the type that the registered types must be assignable to. Types will be registered with this type as the service type, unless `AsImplementedInterfaces` or `AsSelf` is set. |
-| **Lifetime** | Set the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
-| **AsImplementedInterfaces** | If true, the registered types will be registered as implemented interfaces instead of their actual type. |
-| **AsSelf** | If true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In that case, implemented interfaces will be "forwarded" to an actual implementation type. |
-| **TypeNameFilter** | Set this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
-| **AttributeFilter** | Filter types by the specified attribute type present. |
-| **ExcludeByTypeName** | Set this value to exclude types from being registered by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
-| **ExcludeByAttribute** | Exclude matching types by the specified attribute type present. |
-| **ExcludeAssignableTo** | Set the type that the registered types must not be assignable to. |
-| **KeySelector** | Set this property to add types as keyed services. This property should point to one of the following: <br>- Name of the static method in the current type with a string return type. The method should be either generic or have a single parameter of type `Type`. <br>- Const field or static property in the implementation type. |
-| **CustomHandler** | Set this property to a static generic method name in the current class. This method will be invoked for each type found by the filter instead of the regular registration logic. This property is incompatible with `Lifetime`, `AsImplementedInterfaces`, `AsSelf`, and `KeySelector` properties. |
+| **FromAssemblyOf** | Sets the assembly containing the given type as the source of types to register. If not specified, the assembly containing the method with this attribute will be used. |
+| **AssemblyNameFilter** | Sets this value to filter scanned assemblies by assembly name. It allows applying an attribute to multiple assemblies. For example, this allows scanning all assemblies from your solution. This option is incompatible with `FromAssemblyOf`. You can use '*' wildcards. You can also use ',' to separate multiple filters. *Be careful to include a limited number of assemblies, as it can affect build and editor performance.* |
+| **AssignableTo** | Sets the type that the registered types must be assignable to. Types will be registered with this type as the service type, unless `AsImplementedInterfaces` or `AsSelf` is set. |
+| **ExcludeAssignableTo** | Sets the type that the registered types must *not* be assignable to. |
+| **Lifetime** | Sets the lifetime of the registered services. `ServiceLifetime.Transient` is used if not specified. |
+| **AsImplementedInterfaces** | If set to true, types will be registered as their implemented interfaces instead of their actual type. |
+| **AsSelf** | If set to true, types will be registered with their actual type. It can be combined with `AsImplementedInterfaces`. In this case, implemented interfaces will be "forwarded" to the "self" implementation. |
+| **TypeNameFilter** | Sets this value to filter the types to register by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
+| **AttributeFilter** | Filters types by the specified attribute type being present. |
+| **ExcludeByTypeName** | Sets this value to exclude types from being registered by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
+| **ExcludeByAttribute** | Excludes matching types by the specified attribute type being present. |
+| **KeySelector** | Sets this property to add types as keyed services. This property should point to one of the following: <br>- The name of a static method in the current type with a string return type. The method should be either generic or have a single parameter of type `Type`. <br>- A constant field or static property in the implementation type. |
+| **CustomHandler** | Sets this property to invoke a custom method for each type found instead of regular registration logic. This property should point to one of the following: <br>- Name of a generic method in the current type. <br>- Static method name in found types. <br>This property is incompatible with `Lifetime`, `AsImplementedInterfaces`, `AsSelf`, and `KeySelector` properties. |

@@ -18,36 +18,36 @@ internal static class GenerateAttributeInfo
         internal class GenerateServiceRegistrationsAttribute : Attribute
         {
             /// <summary>
-            /// Set the assembly containing the given type as the source of types to register.
+            /// Sets the assembly containing the given type as the source of types to register.
             /// If not specified, the assembly containing the method with this attribute will be used.
             /// </summary>
             public Type? FromAssemblyOf { get; set; }
         
             /// <summary>
-            /// Set this value to filter scanned assemblies by assembly name.
-            /// It allows to apply an attribute to multiple assemblies.
-            /// For example, this allows to scan all assemblies from your solution.
+            /// Sets this value to filter scanned assemblies by assembly name.
+            /// It allows applying an attribute to multiple assemblies.
+            /// For example, this allows scanning all assemblies from your solution.
             /// This option is incompatible with <see cref="FromAssemblyOf"/>.
             /// You can use '*' wildcards. You can also use ',' to separate multiple filters.
             /// </summary>
-            /// <remarks>Be careful to include limited amount of assemblies, as it can affect build and editor performance.</remarks>
+            /// <remarks>Be careful to include a limited number of assemblies, as it can affect build and editor performance.</remarks>
             /// <example>My.Product.*</example>
             public string? AssemblyNameFilter { get; set; }
         
             /// <summary>
-            /// Set the type that the registered types must be assignable to.
+            /// Sets the type that the registered types must be assignable to.
             /// Types will be registered with this type as the service type,
             /// unless <see cref="AsImplementedInterfaces"/> or <see cref="AsSelf"/> is set.
             /// </summary>
             public Type? AssignableTo { get; set; }
 
             /// <summary>
-            /// Set the type that the registered types must *not* be assignable to.
+            /// Sets the type that the registered types must *not* be assignable to.
             /// </summary>
             public Type? ExcludeAssignableTo { get; set; }
 
             /// <summary>
-            /// Set the lifetime of the registered services.
+            /// Sets the lifetime of the registered services.
             /// <see cref="ServiceLifetime.Transient"/> is used if not specified.
             /// </summary>
             public ServiceLifetime Lifetime { get; set; }
@@ -65,7 +65,7 @@ internal static class GenerateAttributeInfo
             public bool AsSelf { get; set; }
         
             /// <summary>
-            /// Set this value to filter the types to register by their full name. 
+            /// Sets this value to filter the types to register by their full name. 
             /// You can use '*' wildcards.
             /// You can also use ',' to separate multiple filters.
             /// </summary>
@@ -74,12 +74,12 @@ internal static class GenerateAttributeInfo
             public string? TypeNameFilter { get; set; }
         
             /// <summary>
-            /// Filter types by the specified attribute type present.
+            /// Filters types by the specified attribute type being present.
             /// </summary>
             public Type? AttributeFilter { get; set; }
         
             /// <summary>
-            /// Set this value to exclude types from being registered by their full name. 
+            /// Sets this value to exclude types from being registered by their full name. 
             /// You can use '*' wildcards.
             /// You can also use ',' to separate multiple filters.
             /// </summary>
@@ -88,12 +88,12 @@ internal static class GenerateAttributeInfo
             public string? ExcludeByTypeName { get; set; }
         
             /// <summary>
-            /// Exclude matching types by the specified attribute type present.
+            /// Excludes matching types by the specified attribute type being present.
             /// </summary>
             public Type? ExcludeByAttribute { get; set; }
         
             /// <summary>
-            /// Set this property to add types as keyed services. 
+            /// Sets this property to add types as keyed services. 
             /// This property should point to one of the following:
             /// - The name of a static method in the current type with a string return type.
             /// The method should be either generic or have a single parameter of type <see cref="Type"/>.
@@ -103,8 +103,10 @@ internal static class GenerateAttributeInfo
             public string? KeySelector { get; set; }
         
             /// <summary>
-            /// Set this property to a static generic method name in the current class.
-            /// This method will be invoked for each type found by the filter instead of the regular registration logic.
+            /// Sets this property to invoke a custom method for each type found instead of regular registration logic.
+            /// This property should point to one of the following:
+            /// - Name of a generic method in the current type.
+            /// - Static method name in found types.
             /// This property is incompatible with <see cref="Lifetime"/>, <see cref="AsImplementedInterfaces"/>, <see cref="AsSelf"/>,
             /// and <see cref="KeySelector"/> properties.
             /// </summary>

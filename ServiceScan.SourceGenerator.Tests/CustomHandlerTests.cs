@@ -519,12 +519,12 @@ public class CustomHandlerTests
             """
             namespace GeneratorTests;
 
-            public static class FirstStaticService : IService 
+            public static class FirstStaticService 
             {
                 public static void Handler(IServiceCollection services) { }
             }
             
-            public static class SecondStaticService : IService 
+            public static class SecondStaticService
             {
                 public static void Handler(IServiceCollection services) { }
             }
