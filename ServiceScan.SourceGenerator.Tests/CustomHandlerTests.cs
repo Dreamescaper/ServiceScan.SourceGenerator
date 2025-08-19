@@ -446,6 +446,57 @@ public class CustomHandlerTests
     }
 
     [Fact]
+    public void UseInstanceCustomHandlerMethod_FromParentType()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+
+            public abstract class AbstractServiceProcessor
+            {
+                protected void HandleType<T>() => System.Console.WriteLine(typeof(T).Name);
+            }
+                    
+            public partial class ServicesProcessor : AbstractServiceProcessor
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IService), CustomHandler = nameof(HandleType))]
+                public partial void ProcessServices();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public partial class ServicesProcessor
+            {
+                public partial void ProcessServices()
+                {
+                    HandleType<global::GeneratorTests.MyService1>();
+                    HandleType<global::GeneratorTests.MyService2>();
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void UseStaticMethodFromMatchedClassAsCustomHandler_WithoutParameters()
     {
         var source = $$"""
