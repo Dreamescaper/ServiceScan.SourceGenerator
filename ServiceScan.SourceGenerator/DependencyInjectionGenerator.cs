@@ -52,40 +52,45 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
     private static string GenerateRegistrationsSource(MethodModel method, EquatableArray<ServiceRegistrationModel> registrations)
     {
-        var registrationsCode = string.Join("\n", registrations.Select(registration =>
-        {
-            if (registration.IsOpenGeneric)
+        var registrationsCode = string.Concat(registrations
+            .Select(registration =>
             {
-                return $"            .Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))";
-            }
-            else
-            {
-                if (registration.ResolveImplementation)
+                if (registration.IsOpenGeneric)
                 {
-                    return $"            .Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())";
+                    return $".Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))";
                 }
                 else
                 {
-                    var addMethod = registration.KeySelector != null
-                        ? $"AddKeyed{registration.Lifetime}"
-                        : $"Add{registration.Lifetime}";
-
-                    var keySelectorInvocation = registration.KeySelectorType switch
+                    if (registration.ResolveImplementation)
                     {
-                        KeySelectorType.GenericMethod => $"{registration.KeySelector}<{registration.ImplementationTypeName}>()",
-                        KeySelectorType.Method => $"{registration.KeySelector}(typeof({registration.ImplementationTypeName}))",
-                        KeySelectorType.TypeMember => $"{registration.ImplementationTypeName}.{registration.KeySelector}",
-                        _ => null
-                    };
+                        return $".Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())";
+                    }
+                    else
+                    {
+                        var addMethod = registration.KeySelector != null
+                            ? $"AddKeyed{registration.Lifetime}"
+                            : $"Add{registration.Lifetime}";
 
-                    return $"            .{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keySelectorInvocation})";
+                        var keySelectorInvocation = registration.KeySelectorType switch
+                        {
+                            KeySelectorType.GenericMethod => $"{registration.KeySelector}<{registration.ImplementationTypeName}>()",
+                            KeySelectorType.Method => $"{registration.KeySelector}(typeof({registration.ImplementationTypeName}))",
+                            KeySelectorType.TypeMember => $"{registration.ImplementationTypeName}.{registration.KeySelector}",
+                            _ => null
+                        };
+
+                        return $".{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keySelectorInvocation})";
+                    }
                 }
-            }
-        }));
+            })
+            .Select(line => $"\n            {line}"));
 
         var returnType = method.ReturnsVoid ? "void" : "IServiceCollection";
-
         var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
+
+        var methodBody = registrations.Count == 0 && method.ReturnsVoid
+            ? ""
+            : $$"""{{(method.ReturnsVoid ? "" : "return ")}}{{method.ParameterName}}{{registrationsCode}};""";
 
         var source = $$"""
                 using Microsoft.Extensions.DependencyInjection;
@@ -96,8 +101,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 {
                     {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection {{method.ParameterName}})
                     {
-                        {{(method.ReturnsVoid ? "" : "return ")}}{{method.ParameterName}}
-                            {{registrationsCode.Trim()}};
+                        {{methodBody}}
                     }
                 }
                 """;

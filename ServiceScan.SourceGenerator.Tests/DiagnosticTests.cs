@@ -135,7 +135,7 @@ public class DiagnosticTests
     }
 
     [Fact]
-    public void SearchCriteriaInTheAttributeProducesNoResults()
+    public void SearchCriteriaInTheAttributeProducesNoResults_ReturnsIServiceCollection()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -169,8 +169,49 @@ public class DiagnosticTests
             {
                 public static partial IServiceCollection AddServices(this IServiceCollection services)
                 {
-                    return services
-                        ;
+                    return services;
+                }
+            }
+            """;
+        Assert.Equal(expectedFile, results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void SearchCriteriaInTheAttributeProducesNoResults_ReturnsVoid()
+    {
+        var compilation = CreateCompilation(Services,
+            """
+            using ServiceScan.SourceGenerator;
+            using Microsoft.Extensions.DependencyInjection;
+            
+            namespace GeneratorTests;
+
+            public interface IHasNoImplementations { }
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IHasNoImplementations))]
+                public static partial void AddServices(this IServiceCollection services);
+            }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NoMatchingTypesFound);
+
+        var expectedFile = """
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial void AddServices(this IServiceCollection services)
+                {
+                    
                 }
             }
             """;
