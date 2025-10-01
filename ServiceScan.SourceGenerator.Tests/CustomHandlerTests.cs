@@ -603,6 +603,66 @@ public class CustomHandlerTests
         Assert.Equal(expected, results.GeneratedTrees[1].ToString());
     }
 
+    [Fact]
+    public void AddServicesWithDecorator()
+    {
+        var services = """
+            namespace GeneratorTests;
+
+            public interface ICommandHandler<T> { }
+            public class CommandHandlerDecorator<T>(ICommandHandler<T> inner) : ICommandHandler<T>;
+
+            public class SpecificHandler1 : ICommandHandler<string>;
+            public class SpecificHandler2 : ICommandHandler<long>;
+            """;
+
+        var source = """
+            using ServiceScan.SourceGenerator;
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace GeneratorTests;
+
+            public static partial class ServiceCollectionExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(ICommandHandler<>), CustomHandler = nameof(AddDecoratedHandler))]
+                public static partial IServiceCollection AddHandlers(this IServiceCollection services);
+
+                private static void AddDecoratedHandler<THandler, TCommand>(this IServiceCollection services)
+                    where THandler : class, ICommandHandler<TCommand>
+                {
+                    // Add handler itself to DI
+                    services.AddScoped<THandler>();
+
+                    // Register decorated handler as ICommandHandler
+                    services.AddScoped<ICommandHandler<TCommand>>(s => new CommandHandlerDecorator<TCommand>(s.GetRequiredService<THandler>()));
+                }
+            }
+            """;
+
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public static partial class ServiceCollectionExtensions
+            {
+                public static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddHandlers(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+                {
+                    AddDecoratedHandler<global::GeneratorTests.SpecificHandler1, string>(services);
+                    AddDecoratedHandler<global::GeneratorTests.SpecificHandler2, long>(services);
+                    return services;
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;

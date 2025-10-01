@@ -58,6 +58,10 @@ public partial class DependencyInjectionGenerator
             if (type.IsStatic && attribute.CustomHandlerType != CustomHandlerType.TypeMethod)
                 continue;
 
+            // Cannot use open generics with CustomHandler
+            if (type.IsGenericType && attribute.CustomHandler != null)
+                continue;
+
             if (attributeFilterType != null)
             {
                 if (!type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attributeFilterType)))

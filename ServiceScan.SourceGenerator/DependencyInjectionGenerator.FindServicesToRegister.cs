@@ -90,8 +90,8 @@ public partial class DependencyInjectionGenerator
                                 attribute.Lifetime,
                                 serviceTypeName,
                                 implementationTypeName,
-                                false,
-                                true,
+                                ResolveImplementation: false,
+                                IsOpenGeneric: true,
                                 attribute.KeySelector,
                                 attribute.KeySelectorType);
 
@@ -105,7 +105,7 @@ public partial class DependencyInjectionGenerator
                                 serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 shouldResolve,
-                                false,
+                                IsOpenGeneric: false,
                                 attribute.KeySelector,
                                 attribute.KeySelectorType);
 
