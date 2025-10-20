@@ -183,19 +183,6 @@ public partial class DependencyInjectionGenerator
         return [containingType.ContainingAssembly];
     }
 
-    private static IEnumerable<IAssemblySymbol> GetSolutionAssemblies(Compilation compilation)
-    {
-        yield return compilation.Assembly;
-
-        foreach (var reference in compilation.References)
-        {
-            if (reference is CompilationReference)
-            {
-                yield return (IAssemblySymbol)compilation.GetAssemblyOrModuleSymbol(reference);
-            }
-        }
-    }
-
     private static IEnumerable<INamedTypeSymbol> GetTypesFromAssembly(IAssemblySymbol assemblySymbol)
     {
         var @namespace = assemblySymbol.GlobalNamespace;
