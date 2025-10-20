@@ -231,13 +231,12 @@ public partial class DependencyInjectionGenerator
 
     private static bool SatisfiesGenericConstraints(INamedTypeSymbol type, IMethodSymbol customHandlerMethod)
     {
-        if (!customHandlerMethod.IsGenericMethod)
+        if (customHandlerMethod.TypeParameters.Length == 0)
             return true;
 
         // Check constraints on the first type parameter (which will be the implementation type)
-        var typeParameter = customHandlerMethod.TypeParameters.FirstOrDefault();
-        if (typeParameter == null)
-            return true;
+        // (Other type parameters could be checked recursively from the first type parameter)
+        var typeParameter = customHandlerMethod.TypeParameters[0];
 
         return SatisfiesGenericConstraints(type, typeParameter, customHandlerMethod);
     }
