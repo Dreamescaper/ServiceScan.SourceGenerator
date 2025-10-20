@@ -92,10 +92,9 @@ public partial class DependencyInjectionGenerator
                 continue;
 
             // Filter by custom handler method generic constraints
-            if (customHandlerMethod != null)
+            if (customHandlerMethod != null && !SatisfiesGenericConstraints(type, customHandlerMethod))
             {
-                if (!SatisfiesGenericConstraints(type, customHandlerMethod))
-                    continue;
+                continue;
             }
 
             if (!semanticModel.IsAccessible(position, type))
@@ -309,9 +308,12 @@ public partial class DependencyInjectionGenerator
 
         static bool MatchedTypeSatisfiesConstraints(INamedTypeSymbol constraintType, IMethodSymbol customHandlerMethod, INamedTypeSymbol matchedType)
         {
+            if (constraintType.TypeArguments.Length != matchedType.TypeArguments.Length)
+                return false;
+
             for (var i = 0; i < constraintType.TypeArguments.Length; i++)
             {
-                if (matchedType.TypeArguments.ElementAtOrDefault(i) is not INamedTypeSymbol candidateTypeArgument)
+                if (matchedType.TypeArguments[i] is not INamedTypeSymbol candidateTypeArgument)
                     return false;
 
                 if (constraintType.TypeArguments[i] is ITypeParameterSymbol typeParameter)
