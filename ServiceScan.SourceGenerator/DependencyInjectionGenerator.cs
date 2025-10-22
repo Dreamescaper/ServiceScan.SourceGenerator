@@ -40,9 +40,9 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     return;
 
                 var (method, registrations, customHandling) = src.Model;
-                string source = customHandling.Count > 0
-                    ? GenerateCustomHandlingSource(method, customHandling)
-                    : GenerateRegistrationsSource(method, registrations);
+                string source = registrations.Count > 0
+                    ? GenerateRegistrationsSource(method, registrations)
+                    : GenerateCustomHandlingSource(method, customHandling);
 
                 source = source.ReplaceLineEndings();
 

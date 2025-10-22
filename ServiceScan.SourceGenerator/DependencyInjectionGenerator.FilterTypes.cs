@@ -225,11 +225,16 @@ public partial class DependencyInjectionGenerator
         // (Other type parameters could be checked recursively from the first type parameter)
         var typeParameter = customHandlerMethod.TypeParameters[0];
 
-        return SatisfiesGenericConstraints(type, typeParameter, customHandlerMethod);
+        var visitedTypeParameters = new HashSet<ITypeParameterSymbol>(SymbolEqualityComparer.Default);
+        return SatisfiesGenericConstraints(type, typeParameter, customHandlerMethod, visitedTypeParameters);
     }
 
-    private static bool SatisfiesGenericConstraints(INamedTypeSymbol type, ITypeParameterSymbol typeParameter, IMethodSymbol customHandlerMethod)
+    private static bool SatisfiesGenericConstraints(INamedTypeSymbol type, ITypeParameterSymbol typeParameter, IMethodSymbol customHandlerMethod, HashSet<ITypeParameterSymbol> visitedTypeParameters)
     {
+        // Prevent infinite recursion in circular constraint scenarios (e.g., X : ISmth<Y>, Y : ISmth<X>)
+        if (!visitedTypeParameters.Add(typeParameter))
+            return true;
+
         // Check reference type constraint
         if (typeParameter.HasReferenceTypeConstraint && type.IsValueType)
             return false;
@@ -259,7 +264,7 @@ public partial class DependencyInjectionGenerator
         {
             if (constraintType is INamedTypeSymbol namedConstraintType)
             {
-                if (!SatisfiesConstraintType(type, namedConstraintType, customHandlerMethod))
+                if (!SatisfiesConstraintType(type, namedConstraintType, customHandlerMethod, visitedTypeParameters))
                     return false;
             }
         }
@@ -267,7 +272,7 @@ public partial class DependencyInjectionGenerator
         return true;
     }
 
-    private static bool SatisfiesConstraintType(INamedTypeSymbol candidateType, INamedTypeSymbol constraintType, IMethodSymbol customHandlerMethod)
+    private static bool SatisfiesConstraintType(INamedTypeSymbol candidateType, INamedTypeSymbol constraintType, IMethodSymbol customHandlerMethod, HashSet<ITypeParameterSymbol> visitedTypeParameters)
     {
         var constraintHasTypeParameters = constraintType.TypeArguments.OfType<ITypeParameterSymbol>().Any();
 
@@ -289,10 +294,10 @@ public partial class DependencyInjectionGenerator
 
             // Then we need to check if any matched interfaces (let's say MyHandlerImplementation implements ICommandHandler<string> and ICommandHandler<MySpecificCommand>)
             // have matching type parameters (e.g. string does not implement ISpecificCommand, but MySpecificCommand - does).
-            return matchedTypes.Any(matchedType => MatchedTypeSatisfiesConstraints(constraintType, customHandlerMethod, matchedType));
+            return matchedTypes.Any(matchedType => MatchedTypeSatisfiesConstraints(constraintType, customHandlerMethod, matchedType, visitedTypeParameters));
         }
 
-        static bool MatchedTypeSatisfiesConstraints(INamedTypeSymbol constraintType, IMethodSymbol customHandlerMethod, INamedTypeSymbol matchedType)
+        static bool MatchedTypeSatisfiesConstraints(INamedTypeSymbol constraintType, IMethodSymbol customHandlerMethod, INamedTypeSymbol matchedType, HashSet<ITypeParameterSymbol> visitedTypeParameters)
         {
             if (constraintType.TypeArguments.Length != matchedType.TypeArguments.Length)
                 return false;
@@ -304,7 +309,7 @@ public partial class DependencyInjectionGenerator
 
                 if (constraintType.TypeArguments[i] is ITypeParameterSymbol typeParameter)
                 {
-                    if (!SatisfiesGenericConstraints(candidateTypeArgument, typeParameter, customHandlerMethod))
+                    if (!SatisfiesGenericConstraints(candidateTypeArgument, typeParameter, customHandlerMethod, visitedTypeParameters))
                         return false;
                 }
                 else

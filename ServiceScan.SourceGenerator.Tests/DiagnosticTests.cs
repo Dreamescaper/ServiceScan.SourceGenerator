@@ -161,13 +161,11 @@ public class DiagnosticTests
         Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NoMatchingTypesFound);
 
         var expectedFile = """
-            using Microsoft.Extensions.DependencyInjection;
-
             namespace GeneratorTests;
 
             public static partial class ServicesExtensions
             {
-                public static partial IServiceCollection AddServices(this IServiceCollection services)
+                public static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddServices(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     return services;
                 }
@@ -203,13 +201,11 @@ public class DiagnosticTests
         Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NoMatchingTypesFound);
 
         var expectedFile = """
-            using Microsoft.Extensions.DependencyInjection;
-
             namespace GeneratorTests;
 
             public static partial class ServicesExtensions
             {
-                public static partial void AddServices(this IServiceCollection services)
+                public static partial void AddServices(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     
                 }

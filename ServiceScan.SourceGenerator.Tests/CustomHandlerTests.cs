@@ -106,6 +106,51 @@ public class CustomHandlerTests
     }
 
     [Fact]
+    public void CustomHandler_NoTypesFound()
+    {
+        var source = $$"""
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IService), CustomHandler = nameof(HandleType))]
+                public static partial void ProcessServices();
+
+                private static void HandleType<T>() => System.Console.WriteLine(typeof(T).Name);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = $$"""
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial void ProcessServices()
+                {
+                    
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
     public void CustomHandlerExtensionMethod()
     {
         var source = $$"""
@@ -980,6 +1025,57 @@ public class CustomHandlerTests
                 public static partial void AddHandlers()
                 {
                     AddHandler<global::GeneratorTests.ValidHandler, global::GeneratorTests.Arg1>();
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+    }
+
+    [Fact]
+    public void CustomHandler_HandlesRecursiveConstraints()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [GenerateServiceRegistrations(TypeNameFilter = "*Smth*", CustomHandler = nameof(HandleType))]
+                public static partial void ProcessServices();
+
+                private static void HandleType<X, Y>() 
+                    where X : ISmth<Y> 
+                    where Y : ISmth<X>                   
+                    => System.Console.WriteLine(typeof(X).Name);
+            }
+            """;
+
+        var services = """
+            namespace GeneratorTests;
+
+            interface ISmth<T>;
+            class SmthX: ISmth<SmthY>; 
+            class SmthY: ISmth<SmthX>;
+            class SmthString: ISmth<string>;
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial void ProcessServices()
+                {
+                    HandleType<global::GeneratorTests.SmthX>();
+                    HandleType<global::GeneratorTests.SmthY>();
                 }
             }
             """;
