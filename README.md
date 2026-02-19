@@ -71,7 +71,7 @@ It adds MediatR requests handlers, although you might need to add other types li
     TypeNameFilter = "*Repository",
     AsImplementedInterfaces = true,
     Lifetime = ServiceLifetime.Scoped)]
-private static partial IServiceCollection AddRepositories(this IServiceCollection services);
+public static partial IServiceCollection AddRepositories(this IServiceCollection services);
 ```
 
 ### Add AspNetCore Minimal API endpoints
