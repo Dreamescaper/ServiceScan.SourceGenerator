@@ -1101,7 +1101,7 @@ public class CustomHandlerTests
     }
 
     [Fact]
-    public void GenerateServiceHandlerAttribute_WithNoParameters()
+    public void ScanForTypesAttribute_WithNoParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1110,7 +1110,7 @@ public class CustomHandlerTests
                     
             public static partial class ServicesExtensions
             {
-                [GenerateServiceHandler(AssignableTo = typeof(IService), CustomHandler = nameof(HandleType))]
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(HandleType))]
                 public static partial void ProcessServices();
 
                 private static void HandleType<T>() => System.Console.WriteLine(typeof(T).Name);
@@ -1149,7 +1149,7 @@ public class CustomHandlerTests
     }
 
     [Fact]
-    public void GenerateServiceHandlerAttribute_WithParameters()
+    public void ScanForTypesAttribute_WithParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1158,7 +1158,7 @@ public class CustomHandlerTests
                     
             public static partial class ServicesExtensions
             {
-                [GenerateServiceHandler(TypeNameFilter = "*Service", CustomHandler = nameof(HandleType))]
+                [ScanForTypes(TypeNameFilter = "*Service", Handler = nameof(HandleType))]
                 public static partial void ProcessServices(string value);
 
                 private static void HandleType<T>(string value) => System.Console.WriteLine(value + typeof(T).Name);
@@ -1197,7 +1197,7 @@ public class CustomHandlerTests
     }
 
     [Fact]
-    public void GenerateServiceHandlerAttribute_MultipleAttributes()
+    public void ScanForTypesAttribute_MultipleAttributes()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1206,8 +1206,8 @@ public class CustomHandlerTests
                     
             public static partial class ServicesExtensions
             {
-                [GenerateServiceHandler(AssignableTo = typeof(IFirstService), CustomHandler = nameof(HandleFirstType))]
-                [GenerateServiceHandler(AssignableTo = typeof(ISecondService), CustomHandler = nameof(HandleSecondType))]
+                [ScanForTypes(AssignableTo = typeof(IFirstService), Handler = nameof(HandleFirstType))]
+                [ScanForTypes(AssignableTo = typeof(ISecondService), Handler = nameof(HandleSecondType))]
                 public static partial void ProcessServices();
 
                 private static void HandleFirstType<T>() => System.Console.WriteLine("First:" + typeof(T).Name);
@@ -1248,7 +1248,7 @@ public class CustomHandlerTests
     }
 
     [Fact]
-    public void GenerateServiceHandlerAttribute_MissingCustomHandler_ReportsDiagnostic()
+    public void ScanForTypesAttribute_MissingHandler_ReportsDiagnostic()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1257,7 +1257,7 @@ public class CustomHandlerTests
                     
             public static partial class ServicesExtensions
             {
-                [GenerateServiceHandler(AssignableTo = typeof(IService))]
+                [ScanForTypes(AssignableTo = typeof(IService))]
                 public static partial void ProcessServices();
             }
             """;
@@ -1281,7 +1281,7 @@ public class CustomHandlerTests
     }
 
     [Fact]
-    public void GenerateServiceHandlerAttribute_MissingSearchCriteria_ReportsDiagnostic()
+    public void ScanForTypesAttribute_MissingSearchCriteria_ReportsDiagnostic()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1290,7 +1290,7 @@ public class CustomHandlerTests
                     
             public static partial class ServicesExtensions
             {
-                [GenerateServiceHandler(CustomHandler = nameof(HandleType))]
+                [ScanForTypes(Handler = nameof(HandleType))]
                 public static partial void ProcessServices();
 
                 private static void HandleType<T>() { }
@@ -1308,7 +1308,7 @@ public class CustomHandlerTests
     }
 
     [Fact]
-    public void MixingGenerateServiceRegistrationsAndGenerateServiceHandler_ReportsDiagnostic()
+    public void MixingGenerateServiceRegistrationsAndScanForTypes_ReportsDiagnostic()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1319,7 +1319,7 @@ public class CustomHandlerTests
             public static partial class ServicesExtensions
             {
                 [GenerateServiceRegistrations(AssignableTo = typeof(IService))]
-                [GenerateServiceHandler(AssignableTo = typeof(IService), CustomHandler = nameof(HandleType))]
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(HandleType))]
                 public static partial IServiceCollection ProcessServices(this IServiceCollection services);
 
                 private static void HandleType<T>() { }

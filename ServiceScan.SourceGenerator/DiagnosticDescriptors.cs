@@ -75,15 +75,15 @@ public static class DiagnosticDescriptors
         true);
 
     public static readonly DiagnosticDescriptor MissingCustomHandlerOnGenerateServiceHandler = new("DI0013",
-        "Missing CustomHandler",
-        "GenerateServiceHandlerAttribute must have CustomHandler specified",
+        "Missing Handler",
+        "ScanForTypesAttribute must have Handler specified",
         "Usage",
         DiagnosticSeverity.Error,
         true);
 
     public static readonly DiagnosticDescriptor CantMixServiceRegistrationsAndServiceHandler = new("DI0014",
-        "Cannot mix GenerateServiceRegistrationsAttribute and GenerateServiceHandlerAttribute",
-        "It is not allowed to use both GenerateServiceRegistrationsAttribute and GenerateServiceHandlerAttribute on the same method",
+        "Cannot mix GenerateServiceRegistrationsAttribute and ScanForTypesAttribute",
+        "It is not allowed to use both GenerateServiceRegistrationsAttribute and ScanForTypesAttribute on the same method",
         "Usage",
         DiagnosticSeverity.Error,
         true);

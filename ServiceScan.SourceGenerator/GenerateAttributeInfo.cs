@@ -3,7 +3,7 @@
 internal static class GenerateAttributeInfo
 {
     public const string MetadataName = "ServiceScan.SourceGenerator.GenerateServiceRegistrationsAttribute";
-    public const string HandlerMetadataName = "ServiceScan.SourceGenerator.GenerateServiceHandlerAttribute";
+    public const string HandlerMetadataName = "ServiceScan.SourceGenerator.ScanForTypesAttribute";
 
     public const string Source = """
         #nullable enable
@@ -111,14 +111,14 @@ internal static class GenerateAttributeInfo
             /// This property is incompatible with <see cref="Lifetime"/>, <see cref="AsImplementedInterfaces"/>, <see cref="AsSelf"/>,
             /// and <see cref="KeySelector"/> properties.
             /// </summary>
-            /// <remarks>This property is obsolete. Use <see cref="GenerateServiceHandlerAttribute"/> instead.</remarks>
-            [Obsolete("Use GenerateServiceHandlerAttribute instead.", error: false)]
+            /// <remarks>This property is obsolete. Use <see cref="ScanForTypesAttribute"/> instead.</remarks>
+            [Obsolete("Use ScanForTypesAttribute instead.", error: false)]
             public string? CustomHandler { get; set; }
         }
 
         [Conditional("CODE_ANALYSIS")]
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-        internal class GenerateServiceHandlerAttribute : Attribute
+        internal class ScanForTypesAttribute : Attribute
         {
             /// <summary>
             /// Sets this property to invoke a custom method for each type found.
@@ -126,7 +126,7 @@ internal static class GenerateAttributeInfo
             /// - Name of a generic method in the current type.
             /// - Static method name in found types.
             /// </summary>
-            public string? CustomHandler { get; set; }
+            public string? Handler { get; set; }
 
             /// <summary>
             /// Sets the assembly containing the given type as the source of types to scan.

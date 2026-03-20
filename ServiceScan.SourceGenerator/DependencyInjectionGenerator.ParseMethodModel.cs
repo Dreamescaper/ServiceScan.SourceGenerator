@@ -17,7 +17,7 @@ public partial class DependencyInjectionGenerator
         if (!method.IsPartialDefinition)
             return Diagnostic.Create(NotPartialDefinition, method.Locations[0]);
 
-        // Check if GenerateServiceHandlerAttribute is also on this method - that's not allowed
+        // Check if ScanForTypesAttribute is also on this method - that's not allowed
         var hasServiceHandlerAttribute = method.GetAttributes()
             .Any(a => a.AttributeClass?.ToDisplayString() == GenerateAttributeInfo.HandlerMetadataName);
 

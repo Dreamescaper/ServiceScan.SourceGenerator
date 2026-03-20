@@ -93,14 +93,14 @@ public class HelloWorldEndpoint : IEndpoint
 
 public static partial class ServiceCollectionExtensions
 {
-    [GenerateServiceHandler(AssignableTo = typeof(IEndpoint), CustomHandler = nameof(IEndpoint.MapEndpoint))]
+    [ScanForTypes(AssignableTo = typeof(IEndpoint), Handler = nameof(IEndpoint.MapEndpoint))]
     public static partial IEndpointRouteBuilder MapEndpoints(this IEndpointRouteBuilder endpoints);
 }
 ```
 
 ### Register Options types
-Another example of `CustomHandler` is to register Options types. We can define custom `OptionAttribute`, which allows to specify configuration section key.
-And then read that value in our `CustomHandler`:
+Another example of `Handler` is to register Options types. We can define custom `OptionAttribute`, which allows to specify configuration section key.
+And then read that value in our `Handler`:
 ```csharp
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public class OptionAttribute(string? section = null) : Attribute
@@ -116,7 +116,7 @@ public record SectionOption { }
 
 public static partial class ServiceCollectionExtensions
 {
-    [GenerateServiceHandler(AttributeFilter = typeof(OptionAttribute), CustomHandler = nameof(AddOption))]
+    [ScanForTypes(AttributeFilter = typeof(OptionAttribute), Handler = nameof(AddOption))]
     public static partial IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration);
 
     private static void AddOption<T>(IServiceCollection services, IConfiguration configuration) where T : class
@@ -133,7 +133,7 @@ public static partial class ServiceCollectionExtensions
 ```csharp
 public static partial class ModelBuilderExtensions
 {
-    [GenerateServiceHandler(AssignableTo = typeof(IEntityTypeConfiguration<>), CustomHandler = nameof(ApplyConfiguration))]
+    [ScanForTypes(AssignableTo = typeof(IEntityTypeConfiguration<>), Handler = nameof(ApplyConfiguration))]
     public static partial ModelBuilder ApplyEntityConfigurations(this ModelBuilder modelBuilder);
 
     private static void ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder)
@@ -164,12 +164,12 @@ public static partial class ModelBuilderExtensions
 | **ExcludeByTypeName** | Sets this value to exclude types from being registered by their full name. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
 | **ExcludeByAttribute** | Excludes matching types by the specified attribute type being present. |
 | **KeySelector** | Sets this property to add types as keyed services. This property should point to one of the following: <br>- The name of a static method in the current type with a string return type. The method should be either generic or have a single parameter of type `Type`. <br>- A constant field or static property in the implementation type. |
-| **CustomHandler** | *(Obsolete — use `GenerateServiceHandler` instead.)* Sets this property to invoke a custom method for each type found instead of regular registration logic. |
+| **CustomHandler** | *(Obsolete — use `ScanForTypes` instead.)* Sets this property to invoke a custom method for each type found instead of regular registration logic. |
 
-`GenerateServiceHandler` attribute is used to invoke a custom method for each matched type. It has the same filtering properties as `GenerateServiceRegistrations`, but without the registration-specific ones (`Lifetime`, `AsImplementedInterfaces`, `AsSelf`, `KeySelector`):
+`ScanForTypes` attribute is used to invoke a custom method for each matched type. It has the same filtering properties as `GenerateServiceRegistrations`, but without the registration-specific ones (`Lifetime`, `AsImplementedInterfaces`, `AsSelf`, `KeySelector`):
 | Property | Description |
 | --- | --- |
-| **CustomHandler** | Sets this property to invoke a custom method for each type found. This property should point to one of the following: <br>- Name of a generic method in the current type. <br>- Static method name in found types. <br>**Note:** Types are automatically filtered by the generic constraints defined on the method's type parameters (e.g., `class`, `struct`, `new()`, interface constraints). |
+| **Handler** | Sets this property to invoke a custom method for each type found. This property should point to one of the following: <br>- Name of a generic method in the current type. <br>- Static method name in found types. <br>**Note:** Types are automatically filtered by the generic constraints defined on the method's type parameters (e.g., `class`, `struct`, `new()`, interface constraints). |
 | **FromAssemblyOf** | Sets the assembly containing the given type as the source of types to scan. If not specified, the assembly containing the method with this attribute will be used. |
 | **AssemblyNameFilter** | Sets this value to filter scanned assemblies by assembly name. This option is incompatible with `FromAssemblyOf`. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
 | **AssignableTo** | Sets the type that the scanned types must be assignable to. |
