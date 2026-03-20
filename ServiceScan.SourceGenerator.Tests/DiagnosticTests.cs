@@ -171,7 +171,7 @@ public class DiagnosticTests
                 }
             }
             """;
-        Assert.Equal(expectedFile, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expectedFile, results.GeneratedTrees[2].ToString());
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class DiagnosticTests
                 }
             }
             """;
-        Assert.Equal(expectedFile, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expectedFile, results.GeneratedTrees[2].ToString());
     }
 
     [Fact]

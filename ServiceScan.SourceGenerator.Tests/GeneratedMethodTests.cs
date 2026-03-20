@@ -57,7 +57,7 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[1].ToString());
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
     }
 
     private static Compilation CreateCompilation(params string[] source)
