@@ -116,7 +116,7 @@ internal static class GenerateAttributeInfo
             public string? CustomHandler { get; set; }
         }
 
-        [Conditional("CODE_ANALYSIS")]
+        [Embedded]
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
         internal class ScanForTypesAttribute : Attribute
         {
