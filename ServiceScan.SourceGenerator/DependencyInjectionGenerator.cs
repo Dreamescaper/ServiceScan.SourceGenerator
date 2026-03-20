@@ -15,6 +15,7 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     {
         context.RegisterPostInitializationOutput(context =>
         {
+            context.AddEmbeddedAttributeDefinition();
             context.AddSource("ServiceScanAttributes.Generated.cs", SourceText.From(GenerateAttributeInfo.Source, Encoding.UTF8));
         });
 

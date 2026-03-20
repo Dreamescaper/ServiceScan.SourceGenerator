@@ -9,12 +9,12 @@ internal static class GenerateAttributeInfo
         #nullable enable
 
         using System;
-        using System.Diagnostics;
+        using Microsoft.CodeAnalysis;
         using Microsoft.Extensions.DependencyInjection;
 
         namespace ServiceScan.SourceGenerator;
 
-        [Conditional("CODE_ANALYSIS")]
+        [Embedded]
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
         internal class GenerateServiceRegistrationsAttribute : Attribute
         {
