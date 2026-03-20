@@ -31,23 +31,40 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             .Select(static (context, ct) => FindServicesToRegister(context));
 
         context.RegisterSourceOutput(methodImplementationsProvider,
-            static (context, src) =>
-            {
-                if (src.Diagnostic != null)
-                    context.ReportDiagnostic(src.Diagnostic);
+            static (context, src) => GenerateSource(context, src));
 
-                if (src.Model == null)
-                    return;
+        var handlerMethodProvider = context.SyntaxProvider.ForAttributeWithMetadataName(
+                GenerateAttributeInfo.HandlerMetadataName,
+                predicate: static (syntaxNode, ct) => syntaxNode is MethodDeclarationSyntax,
+                transform: static (context, ct) => ParseHandlerMethodModel(context))
+            .Where(method => method != null);
 
-                var (method, registrations, customHandling) = src.Model;
-                string source = registrations.Count > 0
-                    ? GenerateRegistrationsSource(method, registrations)
-                    : GenerateCustomHandlingSource(method, customHandling);
+        var combinedHandlerProvider = handlerMethodProvider.Combine(context.CompilationProvider)
+            .WithComparer(CombinedProviderComparer.Instance);
 
-                source = source.ReplaceLineEndings();
+        var handlerImplementationsProvider = combinedHandlerProvider
+            .Select(static (context, ct) => FindServicesToRegister(context));
 
-                context.AddSource($"{method.TypeName}_{method.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
-            });
+        context.RegisterSourceOutput(handlerImplementationsProvider,
+            static (context, src) => GenerateSource(context, src));
+    }
+
+    private static void GenerateSource(SourceProductionContext context, DiagnosticModel<MethodImplementationModel> src)
+    {
+        if (src.Diagnostic != null)
+            context.ReportDiagnostic(src.Diagnostic);
+
+        if (src.Model == null)
+            return;
+
+        var (method, registrations, customHandling) = src.Model;
+        string source = registrations.Count > 0
+            ? GenerateRegistrationsSource(method, registrations)
+            : GenerateCustomHandlingSource(method, customHandling);
+
+        source = source.ReplaceLineEndings();
+
+        context.AddSource($"{method.TypeName}_{method.MethodName}.Generated.cs", SourceText.From(source, Encoding.UTF8));
     }
 
     private static string GenerateRegistrationsSource(MethodModel method, EquatableArray<ServiceRegistrationModel> registrations)

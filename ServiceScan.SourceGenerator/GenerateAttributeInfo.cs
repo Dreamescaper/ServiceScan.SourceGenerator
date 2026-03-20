@@ -3,6 +3,7 @@
 internal static class GenerateAttributeInfo
 {
     public const string MetadataName = "ServiceScan.SourceGenerator.GenerateServiceRegistrationsAttribute";
+    public const string HandlerMetadataName = "ServiceScan.SourceGenerator.GenerateServiceHandlerAttribute";
 
     public const string Source = """
         #nullable enable
@@ -110,7 +111,77 @@ internal static class GenerateAttributeInfo
             /// This property is incompatible with <see cref="Lifetime"/>, <see cref="AsImplementedInterfaces"/>, <see cref="AsSelf"/>,
             /// and <see cref="KeySelector"/> properties.
             /// </summary>
+            /// <remarks>This property is obsolete. Use <see cref="GenerateServiceHandlerAttribute"/> instead.</remarks>
+            [Obsolete("Use GenerateServiceHandlerAttribute instead.", error: false)]
             public string? CustomHandler { get; set; }
+        }
+
+        [Conditional("CODE_ANALYSIS")]
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+        internal class GenerateServiceHandlerAttribute : Attribute
+        {
+            /// <summary>
+            /// Sets this property to invoke a custom method for each type found.
+            /// This property should point to one of the following:
+            /// - Name of a generic method in the current type.
+            /// - Static method name in found types.
+            /// </summary>
+            public string? CustomHandler { get; set; }
+
+            /// <summary>
+            /// Sets the assembly containing the given type as the source of types to scan.
+            /// If not specified, the assembly containing the method with this attribute will be used.
+            /// </summary>
+            public Type? FromAssemblyOf { get; set; }
+
+            /// <summary>
+            /// Sets this value to filter scanned assemblies by assembly name.
+            /// It allows applying an attribute to multiple assemblies.
+            /// For example, this allows scanning all assemblies from your solution.
+            /// This option is incompatible with <see cref="FromAssemblyOf"/>.
+            /// You can use '*' wildcards. You can also use ',' to separate multiple filters.
+            /// </summary>
+            /// <remarks>Be careful to include a limited number of assemblies, as it can affect build and editor performance.</remarks>
+            /// <example>My.Product.*</example>
+            public string? AssemblyNameFilter { get; set; }
+
+            /// <summary>
+            /// Sets the type that the scanned types must be assignable to.
+            /// </summary>
+            public Type? AssignableTo { get; set; }
+
+            /// <summary>
+            /// Sets the type that the scanned types must *not* be assignable to.
+            /// </summary>
+            public Type? ExcludeAssignableTo { get; set; }
+
+            /// <summary>
+            /// Sets this value to filter the types by their full name. 
+            /// You can use '*' wildcards.
+            /// You can also use ',' to separate multiple filters.
+            /// </summary>
+            /// <example>Namespace.With.Services.*</example>
+            /// <example>*Service,*Factory</example>
+            public string? TypeNameFilter { get; set; }
+
+            /// <summary>
+            /// Filters types by the specified attribute type being present.
+            /// </summary>
+            public Type? AttributeFilter { get; set; }
+
+            /// <summary>
+            /// Sets this value to exclude types by their full name. 
+            /// You can use '*' wildcards.
+            /// You can also use ',' to separate multiple filters.
+            /// </summary>
+            /// <example>Namespace.With.Services.*</example>
+            /// <example>*Service,*Factory</example>
+            public string? ExcludeByTypeName { get; set; }
+
+            /// <summary>
+            /// Excludes matching types by the specified attribute type being present.
+            /// </summary>
+            public Type? ExcludeByAttribute { get; set; }
         }
         """;
 }
