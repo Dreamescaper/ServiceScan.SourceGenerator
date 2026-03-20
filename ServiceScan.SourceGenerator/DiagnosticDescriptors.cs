@@ -87,4 +87,11 @@ public static class DiagnosticDescriptors
         "Usage",
         DiagnosticSeverity.Error,
         true);
+
+    public static readonly DiagnosticDescriptor WrongHandlerReturnTypeForCollectionReturn = new("DI0015",
+        "Handler return type does not match collection element type",
+        "Handler return type must match the element type of the collection return type",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
 }

@@ -26,6 +26,7 @@ public partial class DependencyInjectionGenerator
         var containingType = compilation.GetTypeByMetadataName(method.TypeMetadataName);
         var registrations = new List<ServiceRegistrationModel>();
         var customHandlers = new List<CustomHandlerModel>();
+        var collectionItems = new List<string>();
 
         foreach (var attribute in attributes)
         {
@@ -35,10 +36,44 @@ public partial class DependencyInjectionGenerator
             {
                 typesFound = true;
 
-                if (attribute.CustomHandler != null)
-                {
-                    var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
+                if (method.ReturnTypeIsCollection)
+                {
+                    if (attribute.CustomHandler == null)
+                    {
+                        // Case 1: no handler, return typeof(T) expressions
+                        collectionItems.Add($"typeof({implementationTypeName})");
+                    }
+                    else
+                    {
+                        // Case 2: handler maps T -> TResponse, generate handler invocation expressions
+                        var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
+
+                        if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
+                        {
+                            foreach (var matchedType in matchedTypes)
+                            {
+                                var typeArguments = string.Join(", ", new[] { implementationTypeName }
+                                    .Concat(matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))));
+
+                                if (attribute.CustomHandlerType == CustomHandlerType.Method)
+                                    collectionItems.Add($"{attribute.CustomHandler}<{typeArguments}>({arguments})");
+                                else
+                                    collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
+                            }
+                        }
+                        else
+                        {
+                            if (attribute.CustomHandlerType == CustomHandlerType.Method)
+                                collectionItems.Add($"{attribute.CustomHandler}<{implementationTypeName}>({arguments})");
+                            else
+                                collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
+                        }
+                    }
+                }
+                else if (attribute.CustomHandler != null)
+                {
                     // If CustomHandler method has multiple type parameters, which are resolvable from the first one - we try to provide them.
                     // e.g. ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder) where T : IEntityTypeConfiguration<TEntity>
                     if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
@@ -81,7 +116,7 @@ public partial class DependencyInjectionGenerator
                     {
                         if (implementationType.IsGenericType)
                         {
-                            var implementationTypeName = implementationType.ConstructUnboundGenericType().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            var implementationTypeNameUnbound = implementationType.ConstructUnboundGenericType().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                             var serviceTypeName = serviceType.IsGenericType
                                 ? serviceType.ConstructUnboundGenericType().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
                                 : serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -89,7 +124,7 @@ public partial class DependencyInjectionGenerator
                             var registration = new ServiceRegistrationModel(
                                 attribute.Lifetime,
                                 serviceTypeName,
-                                implementationTypeName,
+                                implementationTypeNameUnbound,
                                 ResolveImplementation: false,
                                 IsOpenGeneric: true,
                                 attribute.KeySelector,
@@ -103,7 +138,7 @@ public partial class DependencyInjectionGenerator
                             var registration = new ServiceRegistrationModel(
                                 attribute.Lifetime,
                                 serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                                implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                implementationTypeName,
                                 shouldResolve,
                                 IsOpenGeneric: false,
                                 attribute.KeySelector,
@@ -119,7 +154,7 @@ public partial class DependencyInjectionGenerator
                 diagnostic ??= Diagnostic.Create(NoMatchingTypesFound, attribute.Location);
         }
 
-        var implementationModel = new MethodImplementationModel(method, [.. registrations], [.. customHandlers]);
+        var implementationModel = new MethodImplementationModel(method, [.. registrations], [.. customHandlers], [.. collectionItems]);
         return new(diagnostic, implementationModel);
     }
 

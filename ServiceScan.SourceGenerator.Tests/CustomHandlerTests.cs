@@ -1343,4 +1343,320 @@ public class CustomHandlerTests
 
         Assert.Contains(results.Diagnostics, d => d.Descriptor == DiagnosticDescriptors.CantMixServiceRegistrationsAndServiceHandler);
     }
+
+    [Fact]
+    public void ScanForTypesAttribute_ReturnsTypeArray_WithNoHandler()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            using System;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService))]
+                public static partial Type[] GetServiceTypes();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial global::System.Type[] GetServiceTypes()
+                {
+                    return [typeof(global::GeneratorTests.MyService1), typeof(global::GeneratorTests.MyService2)];
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_ReturnsIEnumerableType_WithNoHandler()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            using System;
+            using System.Collections.Generic;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService))]
+                public static partial IEnumerable<Type> GetServiceTypes();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial global::System.Collections.Generic.IEnumerable<global::System.Type> GetServiceTypes()
+                {
+                    return [typeof(global::GeneratorTests.MyService1), typeof(global::GeneratorTests.MyService2)];
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_ReturnsResponseArray_WithHandler()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(GetServiceInfo))]
+                public static partial ServiceInfo[] GetServiceInfos();
+
+                private static ServiceInfo GetServiceInfo<T>() => new ServiceInfo(typeof(T).Name);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+
+            public class ServiceInfo
+            {
+                public ServiceInfo(string name) { }
+            }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial global::GeneratorTests.ServiceInfo[] GetServiceInfos()
+                {
+                    return [GetServiceInfo<global::GeneratorTests.MyService1>(), GetServiceInfo<global::GeneratorTests.MyService2>()];
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_ReturnsIEnumerableResponse_WithHandler()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            using System.Collections.Generic;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(GetServiceInfo))]
+                public static partial IEnumerable<ServiceInfo> GetServiceInfos();
+
+                private static ServiceInfo GetServiceInfo<T>() => new ServiceInfo(typeof(T).Name);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+
+            public class ServiceInfo
+            {
+                public ServiceInfo(string name) { }
+            }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial global::System.Collections.Generic.IEnumerable<global::GeneratorTests.ServiceInfo> GetServiceInfos()
+                {
+                    return [GetServiceInfo<global::GeneratorTests.MyService1>(), GetServiceInfo<global::GeneratorTests.MyService2>()];
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_ReturnsTypeArray_MultipleAttributes()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            using System;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IFirstService))]
+                [ScanForTypes(AssignableTo = typeof(ISecondService))]
+                public static partial Type[] GetServiceTypes();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IFirstService { }
+            public interface ISecondService { }
+            public class MyService1 : IFirstService { }
+            public class MyService2 : ISecondService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial global::System.Type[] GetServiceTypes()
+                {
+                    return [typeof(global::GeneratorTests.MyService1), typeof(global::GeneratorTests.MyService2)];
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_HandlerReturnTypeMismatch_ReportsDiagnostic()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(GetServiceName))]
+                public static partial ServiceInfo[] GetServiceInfos();
+
+                private static string GetServiceName<T>() => typeof(T).Name;
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService : IService { }
+
+            public class ServiceInfo { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.WrongHandlerReturnTypeForCollectionReturn);
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_NoHandlerNonTypeCollection_ReportsDiagnostic()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService))]
+                public static partial string[] GetServiceNames();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingCustomHandlerOnGenerateServiceHandler);
+    }
 }

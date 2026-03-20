@@ -16,7 +16,9 @@ record MethodModel(
     EquatableArray<ParameterModel> Parameters,
     bool IsExtensionMethod,
     bool ReturnsVoid,
-    string ReturnType)
+    string ReturnType,
+    bool ReturnTypeIsCollection,
+    string? CollectionElementTypeName)
 {
     public string ParameterName => Parameters.First().Name;
 
@@ -26,6 +28,9 @@ record MethodModel(
             .Select(p => new ParameterModel(p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), p.Name))];
 
         var typeSyntax = syntax.FirstAncestorOrSelf<TypeDeclarationSyntax>();
+
+        var (returnTypeIsCollection, collectionElementTypeSymbol) = GetCollectionReturnInfo(method.ReturnType);
+        var collectionElementTypeName = collectionElementTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         return new MethodModel(
             Namespace: method.ContainingNamespace.IsGlobalNamespace ? null : method.ContainingNamespace.ToDisplayString(),
@@ -37,7 +42,21 @@ record MethodModel(
             Parameters: parameters,
             IsExtensionMethod: method.IsExtensionMethod,
             ReturnsVoid: method.ReturnsVoid,
-            ReturnType: method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            ReturnType: method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            ReturnTypeIsCollection: returnTypeIsCollection,
+            CollectionElementTypeName: collectionElementTypeName);
+    }
+
+    public static (bool isCollection, ITypeSymbol? elementTypeSymbol) GetCollectionReturnInfo(ITypeSymbol returnType)
+    {
+        if (returnType is IArrayTypeSymbol arrayType)
+            return (true, arrayType.ElementType);
+
+        if (returnType is INamedTypeSymbol { IsGenericType: true, Arity: 1 } namedType &&
+            namedType.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T)
+            return (true, namedType.TypeArguments[0]);
+
+        return (false, null);
     }
 
     private static string GetModifiers(SyntaxNode? syntax)
