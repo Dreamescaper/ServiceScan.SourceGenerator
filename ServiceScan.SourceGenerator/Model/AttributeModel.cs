@@ -47,7 +47,8 @@ record AttributeModel(
         var excludeByTypeName = attribute.NamedArguments.FirstOrDefault(a => a.Key == "ExcludeByTypeName").Value.Value as string;
         var excludeAssignableTo = attribute.NamedArguments.FirstOrDefault(a => a.Key == "ExcludeAssignableTo").Value.Value as INamedTypeSymbol;
         var keySelector = attribute.NamedArguments.FirstOrDefault(a => a.Key == "KeySelector").Value.Value as string;
-        var customHandler = attribute.NamedArguments.FirstOrDefault(a => a.Key == "CustomHandler").Value.Value as string;
+        var customHandler = (attribute.NamedArguments.FirstOrDefault(a => a.Key == "Handler").Value.Value
+                             ?? attribute.NamedArguments.FirstOrDefault(a => a.Key == "CustomHandler").Value.Value) as string;
 
         var assignableToTypeParametersCount = assignableTo?.TypeParameters.Length ?? 0;
 

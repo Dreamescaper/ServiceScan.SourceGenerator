@@ -17,6 +17,13 @@ public partial class DependencyInjectionGenerator
         if (!method.IsPartialDefinition)
             return Diagnostic.Create(NotPartialDefinition, method.Locations[0]);
 
+        // Check if ScanForTypesAttribute is also on this method - that's not allowed
+        var hasServiceHandlerAttribute = method.GetAttributes()
+            .Any(a => a.AttributeClass?.ToDisplayString() == GenerateAttributeInfo.HandlerMetadataName);
+
+        if (hasServiceHandlerAttribute)
+            return Diagnostic.Create(CantMixServiceRegistrationsAndServiceHandler, method.Locations[0]);
+
         var position = context.TargetNode.SpanStart;
         var attributeData = context.Attributes.Select(a => AttributeModel.Create(a, method, context.SemanticModel)).ToArray();
         var hasCustomHandlers = attributeData.Any(a => a.CustomHandler != null);
@@ -89,6 +96,65 @@ public partial class DependencyInjectionGenerator
             {
                 return Diagnostic.Create(WrongReturnTypeForCustomHandler, method.Locations[0]);
             }
+        }
+
+        var model = MethodModel.Create(method, context.TargetNode);
+        return new MethodWithAttributesModel(model, [.. attributeData]);
+    }
+
+    private static DiagnosticModel<MethodWithAttributesModel>? ParseHandlerMethodModel(GeneratorAttributeSyntaxContext context)
+    {
+        if (context.TargetSymbol is not IMethodSymbol method)
+            return null;
+
+        if (!method.IsPartialDefinition)
+            return Diagnostic.Create(NotPartialDefinition, method.Locations[0]);
+
+        // Skip if this method also has GenerateServiceRegistrationsAttribute - that provider reports the mixing error
+        var hasServiceRegistrationsAttribute = method.GetAttributes()
+            .Any(a => a.AttributeClass?.ToDisplayString() == GenerateAttributeInfo.MetadataName);
+
+        if (hasServiceRegistrationsAttribute)
+            return null;
+
+        var position = context.TargetNode.SpanStart;
+        var attributeData = context.Attributes.Select(a => AttributeModel.Create(a, method, context.SemanticModel)).ToArray();
+
+        foreach (var attribute in attributeData)
+        {
+            if (attribute.CustomHandler == null)
+                return Diagnostic.Create(MissingCustomHandlerOnGenerateServiceHandler, attribute.Location);
+
+            if (!attribute.HasSearchCriteria)
+                return Diagnostic.Create(MissingSearchCriteria, attribute.Location);
+
+            if (attribute.AssemblyOfTypeName != null && attribute.AssemblyNameFilter != null)
+                return Diagnostic.Create(CantUseBothFromAssemblyOfAndAssemblyNameFilter, attribute.Location);
+
+            var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
+
+            if (customHandlerMethod != null)
+            {
+                if (!customHandlerMethod.IsGenericMethod)
+                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+
+                var typesMatch = Enumerable.SequenceEqual(
+                    method.Parameters.Select(p => p.Type),
+                    customHandlerMethod.Parameters.Select(p => p.Type),
+                    SymbolEqualityComparer.Default);
+
+                if (!typesMatch)
+                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+            }
+
+            if (attribute.HasErrors)
+                return null;
+        }
+
+        if (!method.ReturnsVoid &&
+            (method.Parameters.Length == 0 || !SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, method.ReturnType)))
+        {
+            return Diagnostic.Create(WrongReturnTypeForCustomHandler, method.Locations[0]);
         }
 
         var model = MethodModel.Create(method, context.TargetNode);
