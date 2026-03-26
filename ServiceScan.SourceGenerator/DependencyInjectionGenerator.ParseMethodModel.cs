@@ -117,13 +117,50 @@ public partial class DependencyInjectionGenerator
         if (hasServiceRegistrationsAttribute)
             return null;
 
+        // Compute collection return type info upfront for use in validation
+        var (returnTypeIsCollection, collectionElementTypeSymbol) = MethodModel.GetCollectionReturnInfo(method.ReturnType);
+        var collectionElementTypeName = collectionElementTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var isTypeCollection = returnTypeIsCollection &&
+            collectionElementTypeSymbol?.ContainingNamespace?.ToDisplayString() == "System" &&
+            collectionElementTypeSymbol?.Name == "Type";
+
         var position = context.TargetNode.SpanStart;
         var attributeData = context.Attributes.Select(a => AttributeModel.Create(a, method, context.SemanticModel)).ToArray();
 
         foreach (var attribute in attributeData)
         {
             if (attribute.CustomHandler == null)
-                return Diagnostic.Create(MissingCustomHandlerOnGenerateServiceHandler, attribute.Location);
+            {
+                // Without a Handler, the method must return Type[] or IEnumerable<Type>
+                if (!isTypeCollection)
+                    return Diagnostic.Create(MissingCustomHandlerOnGenerateServiceHandler, attribute.Location);
+            }
+            else
+            {
+                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
+
+                if (customHandlerMethod != null)
+                {
+                    if (!customHandlerMethod.IsGenericMethod)
+                        return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+
+                    // When method returns a collection, validate that handler return type matches the element type
+                    if (returnTypeIsCollection)
+                    {
+                        var handlerReturnTypeName = customHandlerMethod.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                        if (handlerReturnTypeName != collectionElementTypeName)
+                            return Diagnostic.Create(WrongHandlerReturnTypeForCollectionReturn, attribute.Location);
+                    }
+
+                    var typesMatch = Enumerable.SequenceEqual(
+                        method.Parameters.Select(p => p.Type),
+                        customHandlerMethod.Parameters.Select(p => p.Type),
+                        SymbolEqualityComparer.Default);
+
+                    if (!typesMatch)
+                        return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+                }
+            }
 
             if (!attribute.HasSearchCriteria)
                 return Diagnostic.Create(MissingSearchCriteria, attribute.Location);
@@ -131,27 +168,11 @@ public partial class DependencyInjectionGenerator
             if (attribute.AssemblyOfTypeName != null && attribute.AssemblyNameFilter != null)
                 return Diagnostic.Create(CantUseBothFromAssemblyOfAndAssemblyNameFilter, attribute.Location);
 
-            var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
-
-            if (customHandlerMethod != null)
-            {
-                if (!customHandlerMethod.IsGenericMethod)
-                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
-
-                var typesMatch = Enumerable.SequenceEqual(
-                    method.Parameters.Select(p => p.Type),
-                    customHandlerMethod.Parameters.Select(p => p.Type),
-                    SymbolEqualityComparer.Default);
-
-                if (!typesMatch)
-                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
-            }
-
             if (attribute.HasErrors)
                 return null;
         }
 
-        if (!method.ReturnsVoid &&
+        if (!method.ReturnsVoid && !returnTypeIsCollection &&
             (method.Parameters.Length == 0 || !SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, method.ReturnType)))
         {
             return Diagnostic.Create(WrongReturnTypeForCustomHandler, method.Locations[0]);

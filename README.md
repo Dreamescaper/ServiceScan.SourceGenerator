@@ -145,6 +145,31 @@ public static partial class ModelBuilderExtensions
 }
 ```
 
+### Get all matched types as a collection
+
+When `Handler` is omitted and the method returns `Type[]` or `IEnumerable<Type>`, `ScanForTypes` returns a collection of matched types:
+```csharp
+public static partial class TypeDiscovery
+{
+    [ScanForTypes(AssignableTo = typeof(IService))]
+    public static partial Type[] GetAllServiceTypes();
+}
+```
+
+### Map matched types to a custom result type
+
+When the method returns `TResponse[]` or `IEnumerable<TResponse>`, specify a `Handler` that maps each found type to `TResponse`:
+```csharp
+public static partial class TypeDiscovery
+{
+    [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(Describe))]
+    public static partial ServiceDescriptor[] GetServiceDescriptors();
+
+    private static ServiceDescriptor Describe<T>() where T : IService
+        => ServiceDescriptor.Transient(typeof(IService), typeof(T));
+}
+```
+
 
 
 ## Parameters

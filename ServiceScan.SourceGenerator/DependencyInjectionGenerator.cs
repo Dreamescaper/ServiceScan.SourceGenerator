@@ -58,10 +58,13 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         if (src.Model == null)
             return;
 
-        var (method, registrations, customHandling) = src.Model;
-        string source = registrations.Count > 0
-            ? GenerateRegistrationsSource(method, registrations)
-            : GenerateCustomHandlingSource(method, customHandling);
+        var (method, registrations, customHandling, collectionItems) = src.Model;
+        string source = (registrations.Count, method.ReturnTypeIsCollection) switch
+        {
+            ( > 0, _) => GenerateRegistrationsSource(method, registrations),
+            (_, true) => GenerateCollectionSource(method, collectionItems),
+            _ => GenerateCustomHandlingSource(method, customHandling)
+        };
 
         source = source.ReplaceLineEndings();
 
@@ -118,6 +121,30 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                 {{method.TypeModifiers}} class {{method.TypeName}}
                 {
                     {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection {{method.ParameterName}})
+                    {
+                        {{methodBody}}
+                    }
+                }
+                """;
+
+        return source;
+    }
+
+    private static string GenerateCollectionSource(MethodModel method, EquatableArray<string> collectionItems)
+    {
+        var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
+        var parameters = string.Join(",", method.Parameters.Select((p, i) =>
+            $"{(i == 0 && method.IsExtensionMethod ? "this" : "")} {p.Type} {p.Name}"));
+
+        var itemsCode = string.Join(",\n", collectionItems.Select(item => $"            {item}"));
+        var methodBody = $"return [\n{itemsCode}\n        ];";
+
+        var source = $$"""
+                {{namespaceDeclaration}}
+
+                {{method.TypeModifiers}} class {{method.TypeName}}
+                {
+                    {{method.MethodModifiers}} {{method.ReturnType}} {{method.MethodName}}({{parameters}})
                     {
                         {{methodBody}}
                     }
