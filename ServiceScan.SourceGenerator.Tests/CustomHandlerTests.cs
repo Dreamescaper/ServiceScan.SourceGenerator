@@ -1383,7 +1383,10 @@ public class CustomHandlerTests
             {
                 public static partial global::System.Type[] GetServiceTypes()
                 {
-                    return [typeof(global::GeneratorTests.MyService1), typeof(global::GeneratorTests.MyService2)];
+                    return [
+                        typeof(global::GeneratorTests.MyService1),
+                        typeof(global::GeneratorTests.MyService2)
+                    ];
                 }
             }
             """;
@@ -1430,7 +1433,10 @@ public class CustomHandlerTests
             {
                 public static partial global::System.Collections.Generic.IEnumerable<global::System.Type> GetServiceTypes()
                 {
-                    return [typeof(global::GeneratorTests.MyService1), typeof(global::GeneratorTests.MyService2)];
+                    return [
+                        typeof(global::GeneratorTests.MyService1),
+                        typeof(global::GeneratorTests.MyService2)
+                    ];
                 }
             }
             """;
@@ -1482,7 +1488,10 @@ public class CustomHandlerTests
             {
                 public static partial global::GeneratorTests.ServiceInfo[] GetServiceInfos()
                 {
-                    return [GetServiceInfo<global::GeneratorTests.MyService1>(), GetServiceInfo<global::GeneratorTests.MyService2>()];
+                    return [
+                        GetServiceInfo<global::GeneratorTests.MyService1>(),
+                        GetServiceInfo<global::GeneratorTests.MyService2>()
+                    ];
                 }
             }
             """;
@@ -1535,7 +1544,10 @@ public class CustomHandlerTests
             {
                 public static partial global::System.Collections.Generic.IEnumerable<global::GeneratorTests.ServiceInfo> GetServiceInfos()
                 {
-                    return [GetServiceInfo<global::GeneratorTests.MyService1>(), GetServiceInfo<global::GeneratorTests.MyService2>()];
+                    return [
+                        GetServiceInfo<global::GeneratorTests.MyService1>(),
+                        GetServiceInfo<global::GeneratorTests.MyService2>()
+                    ];
                 }
             }
             """;
@@ -1583,7 +1595,10 @@ public class CustomHandlerTests
             {
                 public static partial global::System.Type[] GetServiceTypes()
                 {
-                    return [typeof(global::GeneratorTests.MyService1), typeof(global::GeneratorTests.MyService2)];
+                    return [
+                        typeof(global::GeneratorTests.MyService1),
+                        typeof(global::GeneratorTests.MyService2)
+                    ];
                 }
             }
             """;

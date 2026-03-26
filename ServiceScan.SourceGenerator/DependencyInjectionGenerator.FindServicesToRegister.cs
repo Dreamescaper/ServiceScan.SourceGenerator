@@ -36,74 +36,13 @@ public partial class DependencyInjectionGenerator
             {
                 typesFound = true;
 
-                var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
                 if (method.ReturnTypeIsCollection)
-                {
-                    if (attribute.CustomHandler == null)
-                    {
-                        // Case 1: no handler, return typeof(T) expressions
-                        collectionItems.Add($"typeof({implementationTypeName})");
-                    }
-                    else
-                    {
-                        // Case 2: handler maps T -> TResponse, generate handler invocation expressions
-                        var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
-
-                        if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
-                        {
-                            foreach (var matchedType in matchedTypes)
-                            {
-                                var typeArguments = string.Join(", ", new[] { implementationTypeName }
-                                    .Concat(matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))));
-
-                                if (attribute.CustomHandlerType == CustomHandlerType.Method)
-                                    collectionItems.Add($"{attribute.CustomHandler}<{typeArguments}>({arguments})");
-                                else
-                                    collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
-                            }
-                        }
-                        else
-                        {
-                            if (attribute.CustomHandlerType == CustomHandlerType.Method)
-                                collectionItems.Add($"{attribute.CustomHandler}<{implementationTypeName}>({arguments})");
-                            else
-                                collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
-                        }
-                    }
-                }
+                    AddCollectionItems(implementationType, matchedTypes, attribute, method, collectionItems);
                 else if (attribute.CustomHandler != null)
-                {
-                    // If CustomHandler method has multiple type parameters, which are resolvable from the first one - we try to provide them.
-                    // e.g. ApplyConfiguration<T, TEntity>(ModelBuilder modelBuilder) where T : IEntityTypeConfiguration<TEntity>
-                    if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
-                    {
-                        foreach (var matchedType in matchedTypes)
-                        {
-                            EquatableArray<string> typeArguments =
-                                [
-                                    implementationTypeName,
-                                    .. matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                                ];
-
-                            customHandlers.Add(new CustomHandlerModel(
-                                attribute.CustomHandlerType.Value,
-                                attribute.CustomHandler,
-                                implementationTypeName,
-                                typeArguments));
-                        }
-                    }
-                    else
-                    {
-                        customHandlers.Add(new CustomHandlerModel(
-                            attribute.CustomHandlerType.Value,
-                            attribute.CustomHandler,
-                            implementationTypeName,
-                            [implementationTypeName]));
-                    }
-                }
+                    AddCustomHandlerItems(implementationType, matchedTypes, attribute, customHandlers);
                 else
                 {
+                    var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     var serviceTypes = (attribute.AsSelf, attribute.AsImplementedInterfaces) switch
                     {
                         (true, true) => [implementationType, .. GetSuitableInterfaces(implementationType)],
@@ -156,6 +95,81 @@ public partial class DependencyInjectionGenerator
 
         var implementationModel = new MethodImplementationModel(method, [.. registrations], [.. customHandlers], [.. collectionItems]);
         return new(diagnostic, implementationModel);
+    }
+
+    private static void AddCollectionItems(
+        INamedTypeSymbol implementationType,
+        IEnumerable<INamedTypeSymbol>? matchedTypes,
+        AttributeModel attribute,
+        MethodModel method,
+        List<string> collectionItems)
+    {
+        var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+        if (attribute.CustomHandler == null)
+        {
+            collectionItems.Add($"typeof({implementationTypeName})");
+        }
+        else
+        {
+            var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
+
+            if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
+            {
+                foreach (var matchedType in matchedTypes)
+                {
+                    var typeArguments = string.Join(", ", new[] { implementationTypeName }
+                        .Concat(matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))));
+
+                    if (attribute.CustomHandlerType == CustomHandlerType.Method)
+                        collectionItems.Add($"{attribute.CustomHandler}<{typeArguments}>({arguments})");
+                    else
+                        collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
+                }
+            }
+            else
+            {
+                if (attribute.CustomHandlerType == CustomHandlerType.Method)
+                    collectionItems.Add($"{attribute.CustomHandler}<{implementationTypeName}>({arguments})");
+                else
+                    collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
+            }
+        }
+    }
+
+    private static void AddCustomHandlerItems(
+        INamedTypeSymbol implementationType,
+        IEnumerable<INamedTypeSymbol>? matchedTypes,
+        AttributeModel attribute,
+        List<CustomHandlerModel> customHandlers)
+    {
+        var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+        if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
+        {
+            foreach (var matchedType in matchedTypes)
+            {
+                EquatableArray<string> typeArguments =
+                    [
+                        implementationTypeName,
+                        .. matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                    ];
+
+                customHandlers.Add(new CustomHandlerModel(
+                    attribute.CustomHandlerType.Value,
+                    attribute.CustomHandler,
+                    implementationTypeName,
+                    typeArguments));
+            }
+        }
+        else
+        {
+            customHandlers.Add(new CustomHandlerModel(
+                attribute.CustomHandlerType.Value,
+                attribute.CustomHandler,
+                implementationTypeName,
+                [implementationTypeName]));
+        }
     }
 
     private static IEnumerable<INamedTypeSymbol> GetSuitableInterfaces(ITypeSymbol type)

@@ -59,11 +59,12 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             return;
 
         var (method, registrations, customHandling, collectionItems) = src.Model;
-        string source = registrations.Count > 0
-            ? GenerateRegistrationsSource(method, registrations)
-            : method.ReturnTypeIsCollection
-                ? GenerateCollectionSource(method, collectionItems)
-                : GenerateCustomHandlingSource(method, customHandling);
+        string source = (registrations.Count, method.ReturnTypeIsCollection) switch
+        {
+            ( > 0, _) => GenerateRegistrationsSource(method, registrations),
+            (_, true) => GenerateCollectionSource(method, collectionItems),
+            _ => GenerateCustomHandlingSource(method, customHandling)
+        };
 
         source = source.ReplaceLineEndings();
 
@@ -135,8 +136,8 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         var parameters = string.Join(",", method.Parameters.Select((p, i) =>
             $"{(i == 0 && method.IsExtensionMethod ? "this" : "")} {p.Type} {p.Name}"));
 
-        var items = string.Join(", ", collectionItems);
-        var methodBody = $"return [{items}];";
+        var itemsCode = string.Join(",\n", collectionItems.Select(item => $"            {item}"));
+        var methodBody = $"return [\n{itemsCode}\n        ];";
 
         var source = $$"""
                 {{namespaceDeclaration}}
