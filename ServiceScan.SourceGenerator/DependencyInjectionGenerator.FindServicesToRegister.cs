@@ -14,6 +14,8 @@ public partial class DependencyInjectionGenerator
         "System.IAsyncDisposable"
     ];
 
+    private static readonly Regex TypePlaceholderRegex = new(@"\bT\b", RegexOptions.Compiled);
+
     private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, Compilation) context)
     {
         var (diagnosticModel, compilation) = context;
@@ -186,7 +188,7 @@ public partial class DependencyInjectionGenerator
     {
         var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var statement = ExpandTemplate(attribute.HandlerTemplate!, implementationTypeName);
-        if (!statement.TrimEnd().EndsWith(";"))
+        if (!statement.EndsWith(";") && !statement.TrimEnd().EndsWith(";"))
             statement += ";";
 
         customHandlers.Add(new CustomHandlerModel(
@@ -198,7 +200,7 @@ public partial class DependencyInjectionGenerator
 
     private static string ExpandTemplate(string template, string typeName)
     {
-        return Regex.Replace(template, @"\bT\b", typeName);
+        return TypePlaceholderRegex.Replace(template, typeName);
     }
 
     private static IEnumerable<INamedTypeSymbol> GetSuitableInterfaces(ITypeSymbol type)
