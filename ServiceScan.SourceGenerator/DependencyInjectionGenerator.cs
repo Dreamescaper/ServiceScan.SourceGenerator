@@ -158,7 +158,11 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     {
         var invocations = string.Join("\n", customHandlers.Select(h =>
         {
-            if (h.CustomHandlerType == CustomHandlerType.Method)
+            if (h.CustomHandlerType == CustomHandlerType.Template)
+            {
+                return $"        {h.HandlerMethodName}";
+            }
+            else if (h.CustomHandlerType == CustomHandlerType.Method)
             {
                 var genericArguments = string.Join(", ", h.TypeArguments);
                 var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));

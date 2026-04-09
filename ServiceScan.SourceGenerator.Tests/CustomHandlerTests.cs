@@ -1674,4 +1674,179 @@ public class CustomHandlerTests
 
         Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingCustomHandlerOnGenerateServiceHandler);
     }
+
+    [Fact]
+    public void ScanForTypesAttribute_HandlerTemplate_ReturnsCollection()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), HandlerTemplate = "new T(argument)")]
+                public static partial IService[] GetServiceInstances(string argument);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { public MyService1(string x) { } }
+            public class MyService2 : IService { public MyService2(string x) { } }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial global::GeneratorTests.IService[] GetServiceInstances( string argument)
+                {
+                    return [
+                        new global::GeneratorTests.MyService1(argument),
+                        new global::GeneratorTests.MyService2(argument)
+                    ];
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_HandlerTemplate_VoidMethod()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), HandlerTemplate = "registry.Add(new T(argument))")]
+                public static partial void RegisterServices(ServiceRegistry registry, string argument);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { public MyService1(string x) { } }
+            public class MyService2 : IService { public MyService2(string x) { } }
+            public class ServiceRegistry { public void Add(IService s) { } }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial void RegisterServices( global::GeneratorTests.ServiceRegistry registry, string argument)
+                {
+                    registry.Add(new global::GeneratorTests.MyService1(argument));
+                    registry.Add(new global::GeneratorTests.MyService2(argument));
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_HandlerTemplate_StatementWithSemicolon()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), HandlerTemplate = "registry.Add(new T(argument));")]
+                public static partial void RegisterServices(ServiceRegistry registry, string argument);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { public MyService1(string x) { } }
+            public class ServiceRegistry { public void Add(IService s) { } }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial void RegisterServices( global::GeneratorTests.ServiceRegistry registry, string argument)
+                {
+                    registry.Add(new global::GeneratorTests.MyService1(argument));
+                }
+            }
+            """;
+        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void ScanForTypesAttribute_BothHandlerAndHandlerTemplate_ReportsDiagnostic()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(GetServiceInfo), HandlerTemplate = "new T()")]
+                public static partial IService[] GetServiceInstances();
+
+                private static IService GetServiceInfo<T>() where T : IService, new() => new T();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.CantUseBothHandlerAndHandlerTemplate);
+    }
 }

@@ -129,13 +129,17 @@ public partial class DependencyInjectionGenerator
 
         foreach (var attribute in attributeData)
         {
-            if (attribute.CustomHandler == null)
+            if (attribute.CustomHandler != null && attribute.HandlerTemplate != null)
             {
-                // Without a Handler, the method must return Type[] or IEnumerable<Type>
+                return Diagnostic.Create(CantUseBothHandlerAndHandlerTemplate, attribute.Location);
+            }
+            else if (attribute.CustomHandler == null && attribute.HandlerTemplate == null)
+            {
+                // Without a Handler or HandlerTemplate, the method must return Type[] or IEnumerable<Type>
                 if (!isTypeCollection)
                     return Diagnostic.Create(MissingCustomHandlerOnGenerateServiceHandler, attribute.Location);
             }
-            else
+            else if (attribute.CustomHandler != null)
             {
                 var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
 
