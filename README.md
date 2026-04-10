@@ -74,6 +74,40 @@ It adds MediatR requests handlers, although you might need to add other types li
 public static partial IServiceCollection AddRepositories(this IServiceCollection services);
 ```
 
+### Register ASP.NET Core controllers as services
+By default, ASP.NET Core controllers are not registered in the DI container — they are instantiated using an activator. However, if you want controllers to be resolved from DI (equivalent to calling `AddControllersAsServices()`), you can register them with `ServiceScan`:
+```csharp
+[GenerateServiceRegistrations(
+    AssignableTo = typeof(ControllerBase),
+    AsSelf = true,
+    Lifetime = ServiceLifetime.Transient)]
+public static partial IServiceCollection AddControllersAsServices(this IServiceCollection services);
+```
+This discovers all classes inheriting from `ControllerBase` and registers each one as a transient service with its concrete type. You can then combine this with `services.AddControllers()`:
+```csharp
+services.AddControllers();
+services.AddControllersAsServices();
+```
+This gives you full DI control over controllers — allowing lifetime customization, decoration, or replacement of individual controllers.
+
+You can also use `TypeNameFilter` to discover controllers by naming convention instead:
+```csharp
+[GenerateServiceRegistrations(
+    TypeNameFilter = "*Controller",
+    AsSelf = true,
+    Lifetime = ServiceLifetime.Transient)]
+public static partial IServiceCollection AddControllersAsServices(this IServiceCollection services);
+```
+
+And you can exclude specific controllers using `ExcludeByTypeName`:
+```csharp
+[GenerateServiceRegistrations(
+    AssignableTo = typeof(ControllerBase),
+    AsSelf = true,
+    ExcludeByTypeName = "*InternalController")]
+public static partial IServiceCollection AddControllersAsServices(this IServiceCollection services);
+```
+
 ### Add AspNetCore Minimal API endpoints
 You can add custom type handler, if you need to do something non-trivial with that type. For example, you can automatically discover
 and map Minimal API endpoints:

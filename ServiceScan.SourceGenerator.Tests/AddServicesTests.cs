@@ -1073,6 +1073,123 @@ public class AddServicesTests
     }
 
     [Fact]
+    public void AddAspNetCoreControllersAsServices()
+    {
+        var attribute = """[GenerateServiceRegistrations(AssignableTo = typeof(ControllerBase), AsSelf = true, Lifetime = ServiceLifetime.Transient)]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public abstract class ControllerBase { }
+            public abstract class Controller : ControllerBase { }
+            public class HomeController : Controller { }
+            public class AccountController : Controller { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<global::GeneratorTests.HomeController, global::GeneratorTests.HomeController>()
+                .AddTransient<global::GeneratorTests.AccountController, global::GeneratorTests.AccountController>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void AddAspNetCoreControllersAsServicesWithTypeNameFilter()
+    {
+        var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Controller", AsSelf = true, Lifetime = ServiceLifetime.Transient)]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public abstract class ControllerBase { }
+            public abstract class Controller : ControllerBase { }
+            public class HomeController : Controller { }
+            public class AccountController : Controller { }
+            public class NotAControllerService { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<global::GeneratorTests.HomeController, global::GeneratorTests.HomeController>()
+                .AddTransient<global::GeneratorTests.AccountController, global::GeneratorTests.AccountController>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void AddAspNetCoreControllersAsScopedServices()
+    {
+        var attribute = """[GenerateServiceRegistrations(AssignableTo = typeof(ControllerBase), AsSelf = true, Lifetime = ServiceLifetime.Scoped)]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public abstract class ControllerBase { }
+            public abstract class Controller : ControllerBase { }
+            public class HomeController : Controller { }
+            public class AccountController : Controller { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddScoped<global::GeneratorTests.HomeController, global::GeneratorTests.HomeController>()
+                .AddScoped<global::GeneratorTests.AccountController, global::GeneratorTests.AccountController>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
+    public void AddAspNetCoreControllersWithExclusion()
+    {
+        var attribute = """[GenerateServiceRegistrations(AssignableTo = typeof(ControllerBase), AsSelf = true, ExcludeByTypeName = "*Account*")]""";
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute(attribute),
+            """
+            namespace GeneratorTests;
+
+            public abstract class ControllerBase { }
+            public abstract class Controller : ControllerBase { }
+            public class HomeController : Controller { }
+            public class AccountController : Controller { }
+            public class AccountSettingsController : Controller { }
+            """);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var registrations = $"""
+            return services
+                .AddTransient<global::GeneratorTests.HomeController, global::GeneratorTests.HomeController>();
+            """;
+        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+    }
+
+    [Fact]
     public void DontGenerateAnythingIfTypeIsInvalid()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IWrongService))]";
