@@ -204,7 +204,7 @@ public static partial class HandlerRegistry
 
 `HandlerTemplate` works equally well with void methods, where each expanded expression becomes a statement:
 ```csharp
-public static partial class ServiceCollectionExtensions
+public static partial class PluginLoader
 {
     [ScanForTypes(AssignableTo = typeof(IPlugin), HandlerTemplate = "registry.Add(new T(options))")]
     public static partial void RegisterPlugins(PluginRegistry registry, PluginOptions options);
