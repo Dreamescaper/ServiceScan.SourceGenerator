@@ -170,6 +170,27 @@ public static partial class TypeDiscovery
 }
 ```
 
+### Create instances using constructors with parameters
+
+When the types you want to instantiate require constructor arguments, use `HandlerTemplate` instead of `Handler`.
+The placeholder `T` is replaced with the fully-qualified name of each matched type:
+```csharp
+public static partial class Factory
+{
+    [ScanForTypes(AssignableTo = typeof(IPlugin), HandlerTemplate = "new T(options)")]
+    public static partial IPlugin[] CreatePlugins(PluginOptions options);
+}
+```
+
+`HandlerTemplate` also works with void methods (and methods that return their first parameter), where each expanded expression becomes a statement:
+```csharp
+public static partial class ServiceCollectionExtensions
+{
+    [ScanForTypes(AssignableTo = typeof(IPlugin), HandlerTemplate = "registry.Add(new T(options))")]
+    public static partial void RegisterPlugins(PluginRegistry registry, PluginOptions options);
+}
+```
+
 
 
 ## Parameters
@@ -195,6 +216,7 @@ public static partial class TypeDiscovery
 | Property | Description |
 | --- | --- |
 | **Handler** | Sets this property to invoke a custom method for each type found. This property should point to one of the following: <br>- Name of a generic method in the current type. <br>- Static method name in found types. <br>**Note:** Types are automatically filtered by the generic constraints defined on the method's type parameters (e.g., `class`, `struct`, `new()`, interface constraints). |
+| **HandlerTemplate** | Sets an expression template to evaluate for each type found. Use `T` as a placeholder for the fully-qualified name of each matched type. For collection-returning methods the template is the element expression; for `void` methods it becomes a statement (a `;` is appended automatically if absent). Incompatible with `Handler`. |
 | **FromAssemblyOf** | Sets the assembly containing the given type as the source of types to scan. If not specified, the assembly containing the method with this attribute will be used. |
 | **AssemblyNameFilter** | Sets this value to filter scanned assemblies by assembly name. This option is incompatible with `FromAssemblyOf`. You can use '*' wildcards. You can also use ',' to separate multiple filters. |
 | **AssignableTo** | Sets the type that the scanned types must be assignable to. |
