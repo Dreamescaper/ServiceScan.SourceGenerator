@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace ServiceScan.SourceGenerator.Tests;
 
@@ -16,12 +16,12 @@ public class GeneratedMethodTests
         public class MyService : IService { }
         """;
 
-    [Theory]
-    [InlineData("public", "public")]
-    [InlineData("public", "private")]
-    [InlineData("internal", "private")]
-    [InlineData("internal", "public")]
-    public void StaticExtensionMethodReturningServices(string classAccessModifier, string methodAccessModifier)
+    [Test]
+    [Arguments("public", "public")]
+    [Arguments("public", "private")]
+    [Arguments("internal", "private")]
+    [Arguments("internal", "public")]
+    public async Task StaticExtensionMethodReturningServices(string classAccessModifier, string methodAccessModifier)
     {
         var compilation = CreateCompilation(Services,
             $$"""
@@ -57,11 +57,11 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void StaticExtensionVoidMethod()
+    [Test]
+    public async Task StaticExtensionVoidMethod()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -97,11 +97,11 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void StaticMethodReturningServices()
+    [Test]
+    public async Task StaticMethodReturningServices()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -137,11 +137,11 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void InstanceVoidMethod()
+    [Test]
+    public async Task InstanceVoidMethod()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -177,11 +177,11 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void MethodInGlobalNamespace()
+    [Test]
+    public async Task MethodInGlobalNamespace()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -216,11 +216,11 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void MethodWithCustomParameterName()
+    [Test]
+    public async Task MethodWithCustomParameterName()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -256,7 +256,7 @@ public class GeneratedMethodTests
             }
             """;
 
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
     private static Compilation CreateCompilation(params string[] source)

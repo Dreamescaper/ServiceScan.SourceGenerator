@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace ServiceScan.SourceGenerator.Tests;
 
@@ -9,8 +9,8 @@ public class CustomHandlerTests
 {
     private readonly DependencyInjectionGenerator _generator = new();
 
-    [Fact]
-    public void CustomHandlerWithNoParameters()
+    [Test]
+    public async Task CustomHandlerWithNoParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -54,11 +54,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandlerWithParameters()
+    [Test]
+    public async Task CustomHandlerWithParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -102,11 +102,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_NoTypesFound()
+    [Test]
+    public async Task CustomHandler_NoTypesFound()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -147,11 +147,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandlerExtensionMethod()
+    [Test]
+    public async Task CustomHandlerExtensionMethod()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -201,11 +201,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandlerWithParametersAndAttributeFilter()
+    [Test]
+    public async Task CustomHandlerWithParametersAndAttributeFilter()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -259,11 +259,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void AddMultipleCustomHandlerAttributesWithDifferentCustomHandler()
+    [Test]
+    public async Task AddMultipleCustomHandlerAttributesWithDifferentCustomHandler()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -310,11 +310,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void AddMultipleCustomHandlerAttributesWithSameCustomHandler()
+    [Test]
+    public async Task AddMultipleCustomHandlerAttributesWithSameCustomHandler()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -360,11 +360,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ResolveCustomHandlerGenericArguments()
+    [Test]
+    public async Task ResolveCustomHandlerGenericArguments()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -439,11 +439,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void UseInstanceCustomHandlerMethod()
+    [Test]
+    public async Task UseInstanceCustomHandlerMethod()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -487,11 +487,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void UseInstanceCustomHandlerMethod_FromParentType()
+    [Test]
+    public async Task UseInstanceCustomHandlerMethod_FromParentType()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -538,11 +538,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void UseStaticMethodFromMatchedClassAsCustomHandler_WithoutParameters()
+    [Test]
+    public async Task UseStaticMethodFromMatchedClassAsCustomHandler_WithoutParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -592,11 +592,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void UseStaticMethodFromMatchedStaticClassAsCustomHandler_WithParameters()
+    [Test]
+    public async Task UseStaticMethodFromMatchedStaticClassAsCustomHandler_WithParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -645,11 +645,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void AddServicesWithDecorator()
+    [Test]
+    public async Task AddServicesWithDecorator()
     {
         var services = """
             namespace GeneratorTests;
@@ -705,11 +705,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_FiltersByNewConstraint()
+    [Test]
+    public async Task CustomHandler_FiltersByNewConstraint()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -758,11 +758,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_FiltersByClassConstraint()
+    [Test]
+    public async Task CustomHandler_FiltersByClassConstraint()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -803,11 +803,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_FiltersByNestedTypeParameterConstraints()
+    [Test]
+    public async Task CustomHandler_FiltersByNestedTypeParameterConstraints()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -858,11 +858,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_FiltersByMultipleInterfacesWithDifferentTypeArguments()
+    [Test]
+    public async Task CustomHandler_FiltersByMultipleInterfacesWithDifferentTypeArguments()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -914,11 +914,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_FiltersByValueTypeConstraint()
+    [Test]
+    public async Task CustomHandler_FiltersByValueTypeConstraint()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -967,11 +967,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_CombinedConstraints()
+    [Test]
+    public async Task CustomHandler_CombinedConstraints()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1028,11 +1028,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void CustomHandler_HandlesRecursiveConstraints()
+    [Test]
+    public async Task CustomHandler_HandlesRecursiveConstraints()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1079,7 +1079,7 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
     private static Compilation CreateCompilation(params string[] source)
@@ -1100,8 +1100,8 @@ public class CustomHandlerTests
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_WithNoParameters()
+    [Test]
+    public async Task ScanForTypesAttribute_WithNoParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1145,11 +1145,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_WithParameters()
+    [Test]
+    public async Task ScanForTypesAttribute_WithParameters()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1193,11 +1193,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_MultipleAttributes()
+    [Test]
+    public async Task ScanForTypesAttribute_MultipleAttributes()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1244,11 +1244,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_MissingHandler_ReportsDiagnostic()
+    [Test]
+    public async Task ScanForTypesAttribute_MissingHandler_ReportsDiagnostic()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1277,11 +1277,11 @@ public class CustomHandlerTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingCustomHandlerOnGenerateServiceHandler);
+        await Assert.That(DiagnosticDescriptors.MissingCustomHandlerOnGenerateServiceHandler).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_MissingSearchCriteria_ReportsDiagnostic()
+    [Test]
+    public async Task ScanForTypesAttribute_MissingSearchCriteria_ReportsDiagnostic()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1304,11 +1304,11 @@ public class CustomHandlerTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingSearchCriteria);
+        await Assert.That(DiagnosticDescriptors.MissingSearchCriteria).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void MixingGenerateServiceRegistrationsAndScanForTypes_ReportsDiagnostic()
+    [Test]
+    public async Task MixingGenerateServiceRegistrationsAndScanForTypes_ReportsDiagnostic()
     {
         var source = $$"""
             using ServiceScan.SourceGenerator;
@@ -1341,11 +1341,11 @@ public class CustomHandlerTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Contains(results.Diagnostics, d => d.Descriptor == DiagnosticDescriptors.CantMixServiceRegistrationsAndServiceHandler);
+        await Assert.That(results.Diagnostics).Contains(d => d.Descriptor == DiagnosticDescriptors.CantMixServiceRegistrationsAndServiceHandler);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_ReturnsTypeArray_WithNoHandler()
+    [Test]
+    public async Task ScanForTypesAttribute_ReturnsTypeArray_WithNoHandler()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1390,11 +1390,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_ReturnsIEnumerableType_WithNoHandler()
+    [Test]
+    public async Task ScanForTypesAttribute_ReturnsIEnumerableType_WithNoHandler()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1440,11 +1440,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_ReturnsResponseArray_WithHandler()
+    [Test]
+    public async Task ScanForTypesAttribute_ReturnsResponseArray_WithHandler()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1495,11 +1495,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_ReturnsIEnumerableResponse_WithHandler()
+    [Test]
+    public async Task ScanForTypesAttribute_ReturnsIEnumerableResponse_WithHandler()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1551,11 +1551,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_ReturnsTypeArray_MultipleAttributes()
+    [Test]
+    public async Task ScanForTypesAttribute_ReturnsTypeArray_MultipleAttributes()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1602,11 +1602,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_HandlerReturnTypeMismatch_ReportsDiagnostic()
+    [Test]
+    public async Task ScanForTypesAttribute_HandlerReturnTypeMismatch_ReportsDiagnostic()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1639,11 +1639,11 @@ public class CustomHandlerTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.WrongHandlerReturnTypeForCollectionReturn);
+        await Assert.That(DiagnosticDescriptors.WrongHandlerReturnTypeForCollectionReturn).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_NoHandlerNonTypeCollection_ReportsDiagnostic()
+    [Test]
+    public async Task ScanForTypesAttribute_NoHandlerNonTypeCollection_ReportsDiagnostic()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1672,11 +1672,11 @@ public class CustomHandlerTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingCustomHandlerOnGenerateServiceHandler);
+        await Assert.That(DiagnosticDescriptors.MissingCustomHandlerOnGenerateServiceHandler).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_HandlerTemplate_ReturnsCollection()
+    [Test]
+    public async Task ScanForTypesAttribute_HandlerTemplate_ReturnsCollection()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1720,11 +1720,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_HandlerTemplate_VoidMethod()
+    [Test]
+    public async Task ScanForTypesAttribute_HandlerTemplate_VoidMethod()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1767,11 +1767,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_HandlerTemplate_StatementWithSemicolon()
+    [Test]
+    public async Task ScanForTypesAttribute_HandlerTemplate_StatementWithSemicolon()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1812,11 +1812,11 @@ public class CustomHandlerTests
                 }
             }
             """;
-        Assert.Equal(expected, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
-    [Fact]
-    public void ScanForTypesAttribute_BothHandlerAndHandlerTemplate_ReportsDiagnostic()
+    [Test]
+    public async Task ScanForTypesAttribute_BothHandlerAndHandlerTemplate_ReportsDiagnostic()
     {
         var source = """
             using ServiceScan.SourceGenerator;
@@ -1847,6 +1847,6 @@ public class CustomHandlerTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.CantUseBothHandlerAndHandlerTemplate);
+        await Assert.That(DiagnosticDescriptors.CantUseBothHandlerAndHandlerTemplate).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 }

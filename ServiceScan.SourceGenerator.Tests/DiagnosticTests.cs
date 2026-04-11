@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace ServiceScan.SourceGenerator.Tests;
 
@@ -34,8 +34,8 @@ public class DiagnosticTests
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 
-    [Fact]
-    public void AttributeAddedToNonPartialMethod()
+    [Test]
+    public async Task AttributeAddedToNonPartialMethod()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -56,11 +56,11 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NotPartialDefinition);
+        await Assert.That(DiagnosticDescriptors.NotPartialDefinition).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void AttributeAddedToMethodReturningWrongType()
+    [Test]
+    public async Task AttributeAddedToMethodReturningWrongType()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -81,11 +81,11 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.WrongReturnType);
+        await Assert.That(DiagnosticDescriptors.WrongReturnType).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void AttributeAddedToMethodWithoutParameters()
+    [Test]
+    public async Task AttributeAddedToMethodWithoutParameters()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -106,11 +106,11 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.WrongMethodParameters);
+        await Assert.That(DiagnosticDescriptors.WrongMethodParameters).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void AttributeAddedToMethodWithWrongParameter()
+    [Test]
+    public async Task AttributeAddedToMethodWithWrongParameter()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -131,11 +131,11 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.WrongMethodParameters);
+        await Assert.That(DiagnosticDescriptors.WrongMethodParameters).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void SearchCriteriaInTheAttributeProducesNoResults_ReturnsIServiceCollection()
+    [Test]
+    public async Task SearchCriteriaInTheAttributeProducesNoResults_ReturnsIServiceCollection()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -158,7 +158,7 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NoMatchingTypesFound);
+        await Assert.That(DiagnosticDescriptors.NoMatchingTypesFound).IsEqualTo(results.Diagnostics.Single().Descriptor);
 
         var expectedFile = """
             namespace GeneratorTests;
@@ -171,11 +171,11 @@ public class DiagnosticTests
                 }
             }
             """;
-        Assert.Equal(expectedFile, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expectedFile);
     }
 
-    [Fact]
-    public void SearchCriteriaInTheAttributeProducesNoResults_ReturnsVoid()
+    [Test]
+    public async Task SearchCriteriaInTheAttributeProducesNoResults_ReturnsVoid()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -198,7 +198,7 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.NoMatchingTypesFound);
+        await Assert.That(DiagnosticDescriptors.NoMatchingTypesFound).IsEqualTo(results.Diagnostics.Single().Descriptor);
 
         var expectedFile = """
             namespace GeneratorTests;
@@ -211,11 +211,11 @@ public class DiagnosticTests
                 }
             }
             """;
-        Assert.Equal(expectedFile, results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expectedFile);
     }
 
-    [Fact]
-    public void SearchCriteriaInTheAttributeIsMissing()
+    [Test]
+    public async Task SearchCriteriaInTheAttributeIsMissing()
     {
         var compilation = CreateCompilation(Services,
             """
@@ -236,11 +236,11 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.MissingSearchCriteria);
+        await Assert.That(DiagnosticDescriptors.MissingSearchCriteria).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void KeySelectorMethod_GenericButHasParameters()
+    [Test]
+    public async Task KeySelectorMethod_GenericButHasParameters()
     {
         var attribute = @"
             private static string GetName<T>(string name) => typeof(T).Name.Replace(""Service"", name);
@@ -262,11 +262,11 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature);
+        await Assert.That(DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void KeySelectorMethod_NonGenericWithoutParameters()
+    [Test]
+    public async Task KeySelectorMethod_NonGenericWithoutParameters()
     {
         var attribute = @"
             private static string GetName() => ""const"";
@@ -288,11 +288,11 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature);
+        await Assert.That(DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 
-    [Fact]
-    public void KeySelectorMethod_Void()
+    [Test]
+    public async Task KeySelectorMethod_Void()
     {
         var attribute = @"
             private static void GetName(Type type)
@@ -317,6 +317,6 @@ public class DiagnosticTests
             .RunGenerators(compilation)
             .GetRunResult();
 
-        Assert.Equal(results.Diagnostics.Single().Descriptor, DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature);
+        await Assert.That(DiagnosticDescriptors.KeySelectorMethodHasIncorrectSignature).IsEqualTo(results.Diagnostics.Single().Descriptor);
     }
 }

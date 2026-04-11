@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace ServiceScan.SourceGenerator.Tests;
 
@@ -9,11 +9,11 @@ public class AddServicesTests
 {
     private readonly DependencyInjectionGenerator _generator = new();
 
-    [Theory]
-    [InlineData(ServiceLifetime.Scoped)]
-    [InlineData(ServiceLifetime.Transient)]
-    [InlineData(ServiceLifetime.Singleton)]
-    public void AddServicesWithLifetime(ServiceLifetime lifetime)
+    [Test]
+    [Arguments(ServiceLifetime.Scoped)]
+    [Arguments(ServiceLifetime.Transient)]
+    [Arguments(ServiceLifetime.Singleton)]
+    public async Task AddServicesWithLifetime(ServiceLifetime lifetime)
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService), Lifetime = ServiceLifetime.{lifetime})]";
 
@@ -37,11 +37,11 @@ public class AddServicesTests
                 .Add{lifetime}<global::GeneratorTests.IService, global::GeneratorTests.MyService1>()
                 .Add{lifetime}<global::GeneratorTests.IService, global::GeneratorTests.MyService2>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesFromAnotherAssembly()
+    [Test]
+    public async Task AddServicesFromAnotherAssembly()
     {
         var attribute = "[GenerateServiceRegistrations(FromAssemblyOf = typeof(External.IExternalService), AssignableTo = typeof(External.IExternalService))]";
         var compilation = CreateCompilation(Sources.MethodWithAttribute(attribute));
@@ -56,11 +56,11 @@ public class AddServicesTests
                 .AddTransient<global::External.IExternalService, global::External.ExternalService1>()
                 .AddTransient<global::External.IExternalService, global::External.ExternalService2>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesFromReferencedAssembliesByAssemblyNameFilter()
+    [Test]
+    public async Task AddServicesFromReferencedAssembliesByAssemblyNameFilter()
     {
         var coreCompilation = CreateCompilation(
             """
@@ -98,11 +98,11 @@ public class AddServicesTests
                 .AddScoped<global::Core.IService, global::Module1.MyService1>()
                 .AddScoped<global::Core.IService, global::Module2.MyService2>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServiceWithNonDirectInterface()
+    [Test]
+    public async Task AddServiceWithNonDirectInterface()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService))]";
 
@@ -127,11 +127,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>()
                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServiceWithNonDirectAbstractClass()
+    [Test]
+    public async Task AddServiceWithNonDirectAbstractClass()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(BaseType))]";
 
@@ -156,11 +156,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.BaseType, global::GeneratorTests.MyService1>()
                 .AddTransient<global::GeneratorTests.BaseType, global::GeneratorTests.MyService2>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAssignableToOpenGenericInterface()
+    [Test]
+    public async Task AddServicesAssignableToOpenGenericInterface()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<>))]";
 
@@ -184,11 +184,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntService>()
                 .AddTransient<global::GeneratorTests.IService<string>, global::GeneratorTests.MyStringService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAssignableToOpenGenericInterface_WithMultipleInterfaces()
+    [Test]
+    public async Task AddServicesAssignableToOpenGenericInterface_WithMultipleInterfaces()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<>))]";
 
@@ -212,11 +212,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntAndStringService>()
                 .AddTransient<global::GeneratorTests.IService<string>, global::GeneratorTests.MyIntAndStringService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAssignableToOpenGenericInterface_WithMultipleInterfaces_AsSelfAndAsImplementedInterfaces()
+    [Test]
+    public async Task AddServicesAssignableToOpenGenericInterface_WithMultipleInterfaces_AsSelfAndAsImplementedInterfaces()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<>), AsSelf = true, AsImplementedInterfaces = true, Lifetime = ServiceLifetime.Singleton)]";
 
@@ -240,11 +240,11 @@ public class AddServicesTests
                 .AddSingleton<global::GeneratorTests.IService<int>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>())
                 .AddSingleton<global::GeneratorTests.IService<string>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>());
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAssignableToClosedGenericInterface()
+    [Test]
+    public async Task AddServicesAssignableToClosedGenericInterface()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService<int>))]";
 
@@ -267,11 +267,11 @@ public class AddServicesTests
             return services
                 .AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAssignableToAbstractClass()
+    [Test]
+    public async Task AddServicesAssignableToAbstractClass()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(AbstractService))]";
 
@@ -295,11 +295,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.AbstractService, global::GeneratorTests.MyService1>()
                 .AddTransient<global::GeneratorTests.AbstractService, global::GeneratorTests.MyService2>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAssignableToAbstractClassAsSelf()
+    [Test]
+    public async Task AddServicesAssignableToAbstractClassAsSelf()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(AbstractService), AsSelf = true)]";
 
@@ -323,11 +323,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.MyService1, global::GeneratorTests.MyService1>()
                 .AddTransient<global::GeneratorTests.MyService2, global::GeneratorTests.MyService2>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServiceAssignableToSelf()
+    [Test]
+    public async Task AddServiceAssignableToSelf()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(MyService))]";
 
@@ -348,11 +348,11 @@ public class AddServicesTests
             return services
                 .AddTransient<global::GeneratorTests.MyService, global::GeneratorTests.MyService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAssignableToOpenGenericAbstractClass()
+    [Test]
+    public async Task AddServicesAssignableToOpenGenericAbstractClass()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(AbstractService<>))]";
 
@@ -376,11 +376,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.AbstractService<int>, global::GeneratorTests.MyIntService>()
                 .AddTransient<global::GeneratorTests.AbstractService<string>, global::GeneratorTests.MyStringService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddGenericServicesImplementingGenericInterfaceAsOpenGenerics()
+    [Test]
+    public async Task AddGenericServicesImplementingGenericInterfaceAsOpenGenerics()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IGenericService<>))]";
 
@@ -404,11 +404,11 @@ public class AddServicesTests
                 .AddTransient(typeof(global::GeneratorTests.IGenericService<>), typeof(global::GeneratorTests.MyService1<>))
                 .AddTransient(typeof(global::GeneratorTests.IGenericService<>), typeof(global::GeneratorTests.MyService2<>));
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddGenericServicesImplementingNonGenericInterfaceAsOpenGenerics()
+    [Test]
+    public async Task AddGenericServicesImplementingNonGenericInterfaceAsOpenGenerics()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IService))]";
 
@@ -432,11 +432,11 @@ public class AddServicesTests
                 .AddTransient(typeof(global::GeneratorTests.IService), typeof(global::GeneratorTests.MyService1<>))
                 .AddTransient(typeof(global::GeneratorTests.IService), typeof(global::GeneratorTests.MyService2<>));
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesWithTypeNameFilter()
+    [Test]
+    public async Task AddServicesWithTypeNameFilter()
     {
 
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service"))]""";
@@ -461,11 +461,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
                 .AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAttributeFilterFilter()
+    [Test]
+    public async Task AddServicesAttributeFilterFilter()
     {
         var attribute = """[GenerateServiceRegistrations(AttributeFilter = typeof(ServiceAttribute))]""";
 
@@ -498,11 +498,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
                 .AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesAttributeFilterFilterAndTypeNameFilter()
+    [Test]
+    public async Task AddServicesAttributeFilterFilterAndTypeNameFilter()
     {
         var attribute = """[GenerateServiceRegistrations(AttributeFilter = typeof(ServiceAttribute), TypeNameFilter = "*Service")]""";
 
@@ -533,11 +533,11 @@ public class AddServicesTests
             return services
                 .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesWithTypeNameFilter_MultipleGroups()
+    [Test]
+    public async Task AddServicesWithTypeNameFilter_MultipleGroups()
     {
 
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*First*,*Second*"))]""";
@@ -562,11 +562,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
                 .AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_ExcludeByTypeName()
+    [Test]
+    public async Task AddServices_ExcludeByTypeName()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeByTypeName = "*Second*")]""";
 
@@ -590,11 +590,11 @@ public class AddServicesTests
             .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
             .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
         """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_ExcludeByAttribute()
+    [Test]
+    public async Task AddServices_ExcludeByAttribute()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeByAttribute = typeof(ExcludeAttribute))]""";
 
@@ -626,11 +626,11 @@ public class AddServicesTests
             .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
             .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
         """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_ExcludeByTypeNameAndAttribute()
+    [Test]
+    public async Task AddServices_ExcludeByTypeNameAndAttribute()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeByTypeName = "*Third*", ExcludeByAttribute = typeof(ExcludeAttribute))]""";
 
@@ -664,11 +664,11 @@ public class AddServicesTests
             .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
             .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
         """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_ExcludeAssignableTo_Interface()
+    [Test]
+    public async Task AddServices_ExcludeAssignableTo_Interface()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(IExclude))]""";
 
@@ -696,11 +696,11 @@ public class AddServicesTests
             .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
             .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
         """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_ExcludeAssignableTo_AbstractClass()
+    [Test]
+    public async Task AddServices_ExcludeAssignableTo_AbstractClass()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(ExcludeBase))]""";
 
@@ -728,11 +728,11 @@ public class AddServicesTests
             .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
             .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
         """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_ExcludeAssignableTo_OpenGenericInterface()
+    [Test]
+    public async Task AddServices_ExcludeAssignableTo_OpenGenericInterface()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(IExclude<>))]""";
 
@@ -762,11 +762,11 @@ public class AddServicesTests
             .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
             .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
         """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_ExcludeAssignableTo_ClosedGenericInterface()
+    [Test]
+    public async Task AddServices_ExcludeAssignableTo_ClosedGenericInterface()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", ExcludeAssignableTo = typeof(IExclude<int>))]""";
 
@@ -797,11 +797,11 @@ public class AddServicesTests
             .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>()
             .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
         """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServices_AssignableToAndExcludeAssignableTo()
+    [Test]
+    public async Task AddServices_AssignableToAndExcludeAssignableTo()
     {
         var attribute = """[GenerateServiceRegistrations(AssignableTo = typeof(IService), ExcludeAssignableTo = typeof(IExclude))]""";
 
@@ -828,11 +828,11 @@ public class AddServicesTests
                                  .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyFirstService>()
                                  .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyThirdService>();
                              """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesWithTypeNameFilterAsImplementedInterfaces()
+    [Test]
+    public async Task AddServicesWithTypeNameFilterAsImplementedInterfaces()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", AsImplementedInterfaces = true))]""";
 
@@ -860,11 +860,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.IServiceB, global::GeneratorTests.MySecondService>()
                 .AddTransient<global::GeneratorTests.IServiceC, global::GeneratorTests.MySecondService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddServicesBothAsSelfAndAsImplementedInterfaces_InterfacesAreForwardedToSelfRegistration()
+    [Test]
+    public async Task AddServicesBothAsSelfAndAsImplementedInterfaces_InterfacesAreForwardedToSelfRegistration()
     {
         var attribute = """
             [GenerateServiceRegistrations(
@@ -895,11 +895,11 @@ public class AddServicesTests
                 .AddSingleton<global::GeneratorTests.IServiceA>(s => s.GetRequiredService<global::GeneratorTests.MyService>())
                 .AddSingleton<global::GeneratorTests.IServiceB>(s => s.GetRequiredService<global::GeneratorTests.MyService>());
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void IDisposableServiceAreExcludedWithImplementedInterfaces()
+    [Test]
+    public async Task IDisposableServiceAreExcludedWithImplementedInterfaces()
     {
         var attribute = """[GenerateServiceRegistrations(TypeNameFilter = "*Service", AsImplementedInterfaces = true))]""";
 
@@ -934,11 +934,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.IServiceB, global::GeneratorTests.MySecondService>()
                 .AddTransient<global::GeneratorTests.IServiceC, global::GeneratorTests.MySecondService>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddNestedTypes()
+    [Test]
+    public async Task AddNestedTypes()
     {
         var attribute = "[GenerateServiceRegistrations(AssignableTo = typeof(IService))]";
         var compilation = CreateCompilation(Sources.MethodWithAttribute(attribute),
@@ -971,11 +971,11 @@ public class AddServicesTests
                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType1.MyService2>()
                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType2.MyService1>();
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddAsKeyedServices_GenericMethod()
+    [Test]
+    public async Task AddAsKeyedServices_GenericMethod()
     {
         var attribute = @"
             private static string GetName<T>() => typeof(T).Name.Replace(""Service"", """");
@@ -1002,11 +1002,11 @@ public class AddServicesTests
                 .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(GetName<global::GeneratorTests.MyService1>())
                 .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(GetName<global::GeneratorTests.MyService2>());
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddAsKeyedServices_MethodWithTypeParameter()
+    [Test]
+    public async Task AddAsKeyedServices_MethodWithTypeParameter()
     {
         var attribute = @"
             private static string GetName(Type type) => type.Name.Replace(""Service"", """");
@@ -1033,11 +1033,11 @@ public class AddServicesTests
                 .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(GetName(typeof(global::GeneratorTests.MyService1)))
                 .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(GetName(typeof(global::GeneratorTests.MyService2)));
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void AddAsKeyedServices_ConstantFieldInType()
+    [Test]
+    public async Task AddAsKeyedServices_ConstantFieldInType()
     {
         var attribute = @"[GenerateServiceRegistrations(AssignableTo = typeof(IService), KeySelector = ""Key"")]";
 
@@ -1069,11 +1069,11 @@ public class AddServicesTests
                 .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(global::GeneratorTests.MyService1.Key)
                 .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(global::GeneratorTests.MyService2.Key);
             """;
-        Assert.Equal(Sources.GetMethodImplementation(registrations), results.GeneratedTrees[2].ToString());
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
 
-    [Fact]
-    public void DontGenerateAnythingIfTypeIsInvalid()
+    [Test]
+    public async Task DontGenerateAnythingIfTypeIsInvalid()
     {
         var attribute = $"[GenerateServiceRegistrations(AssignableTo = typeof(IWrongService))]";
 
@@ -1085,7 +1085,7 @@ public class AddServicesTests
             .GetRunResult();
 
         // Two files: one for EmbeddedAttribute and one for generated attribute itself.
-        Assert.Equal(2, results.GeneratedTrees.Length);
+        await Assert.That(results.GeneratedTrees.Length).IsEqualTo(2);
     }
 
     private static Compilation CreateCompilation(params string[] source)
@@ -1115,4 +1115,3 @@ public class AddServicesTests
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 }
-
