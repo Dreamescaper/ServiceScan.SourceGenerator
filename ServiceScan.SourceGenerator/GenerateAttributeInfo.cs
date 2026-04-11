@@ -125,8 +125,21 @@ internal static class GenerateAttributeInfo
             /// This property should point to one of the following:
             /// - Name of a generic method in the current type.
             /// - Static method name in found types.
+            /// This property is incompatible with <see cref="HandlerTemplate"/>.
             /// </summary>
             public string? Handler { get; set; }
+
+            /// <summary>
+            /// Sets an expression template to evaluate for each type found.
+            /// Use <c>T</c> as a placeholder for the full name of each found type.
+            /// For void methods (or methods returning their first argument), the template is used as a statement;
+            /// a semicolon is appended automatically if not present.
+            /// For methods returning a collection, the template is used as the expression for each collection element.
+            /// This property is incompatible with <see cref="Handler"/>.
+            /// </summary>
+            /// <example>new T(argument)</example>
+            /// <example>registry.Add(new T(argument))</example>
+            public string? HandlerTemplate { get; set; }
 
             /// <summary>
             /// Sets the assembly containing the given type as the source of types to scan.

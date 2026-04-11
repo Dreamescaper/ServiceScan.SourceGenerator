@@ -5,7 +5,7 @@ using ServiceScan.SourceGenerator.Extensions;
 namespace ServiceScan.SourceGenerator.Model;
 
 enum KeySelectorType { Method, GenericMethod, TypeMember };
-enum CustomHandlerType { Method, TypeMethod };
+enum CustomHandlerType { Method, TypeMethod, Template };
 
 record AttributeModel(
     string? AssignableToTypeName,
@@ -28,7 +28,8 @@ record AttributeModel(
     bool AsImplementedInterfaces,
     bool AsSelf,
     Location Location,
-    bool HasErrors)
+    bool HasErrors,
+    string? HandlerTemplate)
 {
     public bool HasSearchCriteria => TypeNameFilter != null || AssignableToTypeName != null || AttributeFilterTypeName != null;
 
@@ -49,6 +50,7 @@ record AttributeModel(
         var keySelector = attribute.NamedArguments.FirstOrDefault(a => a.Key == "KeySelector").Value.Value as string;
         var customHandler = (attribute.NamedArguments.FirstOrDefault(a => a.Key == "Handler").Value.Value
                              ?? attribute.NamedArguments.FirstOrDefault(a => a.Key == "CustomHandler").Value.Value) as string;
+        var handlerTemplate = attribute.NamedArguments.FirstOrDefault(a => a.Key == "HandlerTemplate").Value.Value as string;
 
         var assignableToTypeParametersCount = assignableTo?.TypeParameters.Length ?? 0;
 
@@ -85,6 +87,9 @@ record AttributeModel(
 
         if (string.IsNullOrWhiteSpace(assemblyNameFilter))
             assemblyNameFilter = null;
+
+        if (string.IsNullOrWhiteSpace(handlerTemplate))
+            handlerTemplate = null;
 
         var attributeFilterTypeName = attributeFilterType?.ToFullMetadataName();
         var excludeByAttributeTypeName = excludeByAttributeType?.ToFullMetadataName();
@@ -134,6 +139,7 @@ record AttributeModel(
             asImplementedInterfaces,
             asSelf,
             location,
-            hasError);
+            hasError,
+            handlerTemplate);
     }
 }

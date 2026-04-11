@@ -94,4 +94,11 @@ public static class DiagnosticDescriptors
         "Usage",
         DiagnosticSeverity.Error,
         true);
+
+    public static readonly DiagnosticDescriptor CantUseBothHandlerAndHandlerTemplate = new("DI0016",
+        "Cannot use both Handler and HandlerTemplate",
+        "It is not allowed to use both Handler and HandlerTemplate in the same attribute",
+        "Usage",
+        DiagnosticSeverity.Error,
+        true);
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using ServiceScan.SourceGenerator.Model;
 using static ServiceScan.SourceGenerator.DiagnosticDescriptors;
@@ -12,6 +13,8 @@ public partial class DependencyInjectionGenerator
         "System.IDisposable",
         "System.IAsyncDisposable"
     ];
+
+    private static readonly Regex TypePlaceholderRegex = new(@"\bT\b", RegexOptions.Compiled);
 
     private static DiagnosticModel<MethodImplementationModel> FindServicesToRegister((DiagnosticModel<MethodWithAttributesModel>, Compilation) context)
     {
@@ -40,6 +43,8 @@ public partial class DependencyInjectionGenerator
                     AddCollectionItems(implementationType, matchedTypes, attribute, method, collectionItems);
                 else if (attribute.CustomHandler != null)
                     AddCustomHandlerItems(implementationType, matchedTypes, attribute, customHandlers);
+                else if (attribute.HandlerTemplate != null)
+                    AddTemplateStatementItem(implementationType, attribute, customHandlers);
                 else
                 {
                     var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -106,9 +111,13 @@ public partial class DependencyInjectionGenerator
     {
         var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        if (attribute.CustomHandler == null)
+        if (attribute.CustomHandler == null && attribute.HandlerTemplate == null)
         {
             collectionItems.Add($"typeof({implementationTypeName})");
+        }
+        else if (attribute.HandlerTemplate != null)
+        {
+            collectionItems.Add(ExpandTemplate(attribute.HandlerTemplate, implementationTypeName));
         }
         else
         {
@@ -170,6 +179,28 @@ public partial class DependencyInjectionGenerator
                 implementationTypeName,
                 [implementationTypeName]));
         }
+    }
+
+    private static void AddTemplateStatementItem(
+        INamedTypeSymbol implementationType,
+        AttributeModel attribute,
+        List<CustomHandlerModel> customHandlers)
+    {
+        var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var statement = ExpandTemplate(attribute.HandlerTemplate!, implementationTypeName);
+        if (!statement.EndsWith(";") && !statement.TrimEnd().EndsWith(";"))
+            statement += ";";
+
+        customHandlers.Add(new CustomHandlerModel(
+            Model.CustomHandlerType.Template,
+            statement,
+            implementationTypeName,
+            []));
+    }
+
+    private static string ExpandTemplate(string template, string typeName)
+    {
+        return TypePlaceholderRegex.Replace(template, typeName);
     }
 
     private static IEnumerable<INamedTypeSymbol> GetSuitableInterfaces(ITypeSymbol type)
