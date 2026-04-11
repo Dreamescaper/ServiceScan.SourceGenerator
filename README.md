@@ -170,10 +170,12 @@ public static partial class TypeDiscovery
 }
 ```
 
-### Create instances using constructors with parameters
+### Use a template expression for each matched type
 
-When the types you want to instantiate require constructor arguments, use `HandlerTemplate` instead of `Handler`.
-The placeholder `T` is replaced with the fully-qualified name of each matched type:
+When `Handler` is not flexible enough — for example when you need to pass extra arguments, call static methods with multiple parameters, or perform `typeof` manipulations — use `HandlerTemplate`.
+The placeholder `T` is replaced with the fully-qualified name of each matched type at code-generation time.
+
+Instantiate types with constructor arguments:
 ```csharp
 public static partial class Factory
 {
@@ -182,7 +184,25 @@ public static partial class Factory
 }
 ```
 
-`HandlerTemplate` also works with void methods (and methods that return their first parameter), where each expanded expression becomes a statement:
+Call a static factory method that takes multiple parameters:
+```csharp
+public static partial class PipelineBuilder
+{
+    [ScanForTypes(AssignableTo = typeof(IPipelineStep), HandlerTemplate = "T.Create(context, logger)")]
+    public static partial IPipelineStep[] BuildSteps(PipelineContext context, ILogger logger);
+}
+```
+
+Perform `typeof` manipulations (e.g. register open-generic metadata):
+```csharp
+public static partial class ServiceCollectionExtensions
+{
+    [ScanForTypes(AssignableTo = typeof(ICommandHandler<>), HandlerTemplate = "services.AddTransient(typeof(ICommandHandler<>), typeof(T))")]
+    public static partial void RegisterHandlers(IServiceCollection services);
+}
+```
+
+`HandlerTemplate` works equally well with void methods, where each expanded expression becomes a statement:
 ```csharp
 public static partial class ServiceCollectionExtensions
 {
