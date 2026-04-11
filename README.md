@@ -193,12 +193,12 @@ public static partial class PipelineBuilder
 }
 ```
 
-Perform `typeof` manipulations (e.g. register open-generic metadata):
+Build descriptor objects using `typeof(T)` and additional context:
 ```csharp
-public static partial class ServiceCollectionExtensions
+public static partial class HandlerRegistry
 {
-    [ScanForTypes(AssignableTo = typeof(ICommandHandler<>), HandlerTemplate = "services.AddTransient(typeof(ICommandHandler<>), typeof(T))")]
-    public static partial void RegisterHandlers(IServiceCollection services);
+    [ScanForTypes(AssignableTo = typeof(ICommandHandler), HandlerTemplate = "new HandlerDescriptor(typeof(T), category)")]
+    public static partial HandlerDescriptor[] GetDescriptors(string category);
 }
 ```
 
