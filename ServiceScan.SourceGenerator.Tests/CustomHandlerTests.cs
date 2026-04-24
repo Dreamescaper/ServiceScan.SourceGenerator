@@ -1555,6 +1555,148 @@ public class CustomHandlerTests
     }
 
     [Test]
+    public async Task ScanForTypesAttribute_ReturnsCollection_WithExternalHandler()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(External.ExternalHandlers.GetServiceName))]
+                public static partial string[] GetServiceNames();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            public class MyService2 : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial string[] GetServiceNames()
+                {
+                    return [
+                        global::External.ExternalHandlers.GetServiceName<global::GeneratorTests.MyService1>(),
+                        global::External.ExternalHandlers.GetServiceName<global::GeneratorTests.MyService2>()
+                    ];
+                }
+            }
+            """;
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
+    }
+
+    [Test]
+    public async Task ScanForTypesAttribute_ReturnsCollection_WithAliasedExternalHandler()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+            using Handlers = External.ExternalHandlers;
+
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IService), Handler = nameof(Handlers.GetServiceName))]
+                public static partial string[] GetServiceNames();
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface IService { }
+            public class MyService1 : IService { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial string[] GetServiceNames()
+                {
+                    return [
+                        global::External.ExternalHandlers.GetServiceName<global::GeneratorTests.MyService1>()
+                    ];
+                }
+            }
+            """;
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
+    }
+
+    [Test]
+    public async Task ScanForTypesAttribute_WithExternalHandlerAndMatchedGenericArguments()
+    {
+        var source = """
+            using Microsoft.Extensions.DependencyInjection;
+            using ServiceScan.SourceGenerator;
+            
+            namespace GeneratorTests;
+                    
+            public static partial class ServicesExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(ICommandHandler<>), Handler = nameof(External.ExternalHandlers.Register))]
+                public static partial IServiceCollection RegisterHandlers(this IServiceCollection services);
+            }
+            """;
+
+        var services =
+            """
+            namespace GeneratorTests;
+
+            public interface ICommandHandler<TRequest> { }
+            public class MyCommand { }
+            public class MyCommandHandler : ICommandHandler<MyCommand> { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServicesExtensions
+            {
+                public static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection RegisterHandlers(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+                {
+                    global::External.ExternalHandlers.Register<global::GeneratorTests.MyCommandHandler, global::GeneratorTests.MyCommand>(services);
+                    return services;
+                }
+            }
+            """;
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
+    }
+
+    [Test]
     public async Task ScanForTypesAttribute_ReturnsTypeArray_MultipleAttributes()
     {
         var source = """

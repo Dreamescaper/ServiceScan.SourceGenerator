@@ -124,6 +124,7 @@ internal static class GenerateAttributeInfo
             /// Sets this property to invoke a custom method for each type found.
             /// This property should point to one of the following:
             /// - Name of a generic method in the current type.
+            /// - <c>nameof(OtherType.Method)</c> for a static generic method on another type.
             /// - Static method name in found types.
             /// This property is incompatible with <see cref="HandlerTemplate"/>.
             /// </summary>
@@ -198,4 +199,3 @@ internal static class GenerateAttributeInfo
         }
         """;
 }
-

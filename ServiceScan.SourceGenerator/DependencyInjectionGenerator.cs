@@ -166,7 +166,8 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
             {
                 var genericArguments = string.Join(", ", h.TypeArguments);
                 var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
-                return $"        {h.HandlerMethodName}<{genericArguments}>({arguments});";
+                var target = h.TypeName is null ? "" : $"{h.TypeName}.";
+                return $"        {target}{h.HandlerMethodName}<{genericArguments}>({arguments});";
             }
             else
             {

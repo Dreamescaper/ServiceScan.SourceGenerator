@@ -12,5 +12,5 @@ record ServiceRegistrationModel(
 record CustomHandlerModel(
     CustomHandlerType CustomHandlerType,
     string HandlerMethodName,
-    string TypeName,
+    string? TypeName,
     EquatableArray<string> TypeArguments);
