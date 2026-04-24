@@ -58,7 +58,8 @@ public partial class DependencyInjectionGenerator
 
             if (attribute.CustomHandler != null)
             {
-                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
+                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position)
+                    ?? GetExternalCustomHandlerMethod(attribute, context.SemanticModel.Compilation, context.SemanticModel, position);
 
                 if (customHandlerMethod != null)
                 {
@@ -141,7 +142,8 @@ public partial class DependencyInjectionGenerator
             }
             else if (attribute.CustomHandler != null)
             {
-                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
+                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position)
+                    ?? GetExternalCustomHandlerMethod(attribute, context.SemanticModel.Compilation, context.SemanticModel, position);
 
                 if (customHandlerMethod != null)
                 {
@@ -184,5 +186,18 @@ public partial class DependencyInjectionGenerator
 
         var model = MethodModel.Create(method, context.TargetNode);
         return new MethodWithAttributesModel(model, [.. attributeData]);
+    }
+
+    private static IMethodSymbol? GetExternalCustomHandlerMethod(
+        AttributeModel attribute,
+        Compilation compilation,
+        SemanticModel semanticModel,
+        int position)
+    {
+        var handlerType = attribute.CustomHandlerDeclaringTypeMetadataName is null
+            ? null
+            : compilation.GetTypeByMetadataName(attribute.CustomHandlerDeclaringTypeMetadataName);
+
+        return handlerType?.GetMethod(attribute.CustomHandler!, semanticModel, position, isStatic: true);
     }
 }
