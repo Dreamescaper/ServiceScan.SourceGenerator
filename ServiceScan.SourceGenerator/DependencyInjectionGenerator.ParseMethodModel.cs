@@ -188,6 +188,10 @@ public partial class DependencyInjectionGenerator
         return new MethodWithAttributesModel(model, [.. attributeData]);
     }
 
+    /// <summary>
+    /// Resolves a static custom handler method declared on another type using the metadata name captured from
+    /// <c>nameof(Type.Method)</c>.
+    /// </summary>
     private static IMethodSymbol? GetExternalCustomHandlerMethod(
         AttributeModel attribute,
         Compilation compilation,

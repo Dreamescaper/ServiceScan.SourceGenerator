@@ -158,6 +158,13 @@ record AttributeModel(
             handlerTemplate);
     }
 
+    /// <summary>
+    /// Extracts the declaring type from a <c>nameof(Type.Method)</c> attribute argument.
+    /// </summary>
+    /// <param name="attribute">The attribute containing the handler argument.</param>
+    /// <param name="semanticModel">The semantic model used to resolve the type symbol.</param>
+    /// <param name="argumentNames">The supported attribute argument names to inspect.</param>
+    /// <returns>The declaring type when the handler is specified as <c>nameof(Type.Method)</c>; otherwise, <see langword="null"/>.</returns>
     private static INamedTypeSymbol? GetExplicitHandlerDeclaringType(AttributeData attribute, SemanticModel semanticModel, params string[] argumentNames)
     {
         if (attribute.ApplicationSyntaxReference?.GetSyntax() is not AttributeSyntax attributeSyntax)
