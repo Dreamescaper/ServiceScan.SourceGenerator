@@ -1270,6 +1270,62 @@ public class CustomHandlerTests
     }
 
     [Test]
+    public async Task ScanForTypesAttribute_WithStaticAbstractInterfaceHandler()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+
+            namespace GeneratorTests;
+
+            public static partial class EndpointBuilderExtensions
+            {
+                [ScanForTypes(AssignableTo = typeof(IEndpoint), Handler = nameof(IEndpoint.MapEndpoint))]
+                public static partial IEndpointRouteBuilder MapEndpoints(this IEndpointRouteBuilder endpoints);
+            }
+
+            public interface IEndpoint
+            {
+                public abstract static void MapEndpoint(IEndpointRouteBuilder endpoints);
+            }
+
+            public interface IEndpointRouteBuilder { }
+
+            public class FirstEndpoint : IEndpoint
+            {
+                public static void MapEndpoint(IEndpointRouteBuilder endpoints) { }
+            }
+
+            public class SecondEndpoint : IEndpoint
+            {
+                public static void MapEndpoint(IEndpointRouteBuilder endpoints) { }
+            }
+            """;
+
+        var compilation = CreateCompilation(source);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class EndpointBuilderExtensions
+            {
+                public static partial global::GeneratorTests.IEndpointRouteBuilder MapEndpoints(this global::GeneratorTests.IEndpointRouteBuilder endpoints)
+                {
+                    global::GeneratorTests.FirstEndpoint.MapEndpoint(endpoints);
+                    global::GeneratorTests.SecondEndpoint.MapEndpoint(endpoints);
+                    return endpoints;
+                }
+            }
+            """;
+        await Assert.That(results.Diagnostics).IsEmpty();
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
+    }
+
+    [Test]
     public async Task ScanForTypesAttribute_WithParameters()
     {
         var source = $$"""

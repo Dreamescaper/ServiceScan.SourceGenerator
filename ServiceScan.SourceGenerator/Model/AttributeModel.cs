@@ -84,18 +84,33 @@ record AttributeModel(
 
             if (explicitHandlerType != null)
             {
-                customHandlerMethod = explicitHandlerType.GetMethod(customHandler, semanticModel, position, isStatic: true);
-                customHandlerDeclaringTypeName = explicitHandlerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                if (HasPolymorphicStaticInterfaceMethod(
+                        explicitHandlerType,
+                        customHandler,
+                        semanticModel,
+                        position))
+                {
+                    customHandlerMethod = null;
+                    customHandlerType = Model.CustomHandlerType.TypeMethod;
+                }
+                else
+                {
+                    customHandlerMethod = explicitHandlerType.GetMethod(customHandler, semanticModel, position, isStatic: true);
+                    customHandlerType = Model.CustomHandlerType.Method;
+                    customHandlerDeclaringTypeName = explicitHandlerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                }
             }
             else
             {
                 customHandlerMethod = method.ContainingType.GetMethod(customHandler, semanticModel, position);
+                customHandlerType = customHandlerMethod != null
+                    ? Model.CustomHandlerType.Method
+                    : Model.CustomHandlerType.TypeMethod;
             }
 
-            customHandlerType = customHandlerMethod != null || explicitHandlerType != null
-                ? Model.CustomHandlerType.Method
-                : Model.CustomHandlerType.TypeMethod;
-            customHandlerGenericParameters = customHandlerMethod?.TypeParameters.Length ?? 0;
+            customHandlerGenericParameters = customHandlerType == Model.CustomHandlerType.Method
+                ? customHandlerMethod?.TypeParameters.Length ?? 0
+                : 0;
         }
 
         if (string.IsNullOrWhiteSpace(typeNameFilter))
@@ -157,6 +172,24 @@ record AttributeModel(
             location,
             hasError,
             handlerTemplate);
+    }
+
+    private static bool HasPolymorphicStaticInterfaceMethod(
+        INamedTypeSymbol handlerType,
+        string methodName,
+        SemanticModel semanticModel,
+        int position)
+    {
+        if (handlerType.TypeKind != TypeKind.Interface)
+            return false;
+
+        return new[] { handlerType }
+            .Concat(handlerType.AllInterfaces)
+            .SelectMany(type => type.GetMembers(methodName).OfType<IMethodSymbol>())
+            .Any(method =>
+                method.IsStatic &&
+                (method.IsAbstract || method.IsVirtual) &&
+                semanticModel.IsAccessible(position, method));
     }
 
     /// <summary>

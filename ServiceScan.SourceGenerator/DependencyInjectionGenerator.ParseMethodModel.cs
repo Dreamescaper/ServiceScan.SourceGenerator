@@ -58,11 +58,13 @@ public partial class DependencyInjectionGenerator
 
             if (attribute.CustomHandler != null)
             {
-                var customHandlerMethod = GetCustomHandlerMethod(
-                    attribute,
-                    method.ContainingType,
-                    context.SemanticModel,
-                    position);
+                var customHandlerMethod = attribute.CustomHandlerType == CustomHandlerType.Method
+                    ? GetCustomHandlerMethod(
+                        attribute,
+                        method.ContainingType,
+                        context.SemanticModel,
+                        position)
+                    : null;
 
                 if (customHandlerMethod == null && attribute.CustomHandlerType == CustomHandlerType.Method)
                 {
@@ -150,11 +152,13 @@ public partial class DependencyInjectionGenerator
             }
             else if (attribute.CustomHandler != null)
             {
-                var customHandlerMethod = GetCustomHandlerMethod(
-                    attribute,
-                    method.ContainingType,
-                    context.SemanticModel,
-                    position);
+                var customHandlerMethod = attribute.CustomHandlerType == CustomHandlerType.Method
+                    ? GetCustomHandlerMethod(
+                        attribute,
+                        method.ContainingType,
+                        context.SemanticModel,
+                        position)
+                    : null;
 
                 if (customHandlerMethod == null && attribute.CustomHandlerType == CustomHandlerType.Method)
                 {

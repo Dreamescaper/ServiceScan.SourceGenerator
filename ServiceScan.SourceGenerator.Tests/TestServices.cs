@@ -3,6 +3,12 @@
 public interface IExternalService;
 public class ExternalService1 : IExternalService { }
 public class ExternalService2 : IExternalService { }
+public interface IExternalEndpointRouteBuilder;
+public interface IExternalEndpoint
+{
+    static abstract void MapEndpoint(IExternalEndpointRouteBuilder endpoints);
+}
+
 public static class ExternalHandlers
 {
     public static string GetServiceName<T>() => typeof(T).Name;
