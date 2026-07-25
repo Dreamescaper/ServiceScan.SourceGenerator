@@ -1147,6 +1147,62 @@ public class CustomHandlerTests
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
     }
 
+    [Test]
+    public async Task CustomHandler_HandlesArrayTypeArgumentWithVariantInterfaceConstraint()
+    {
+        var source = """
+            using ServiceScan.SourceGenerator;
+
+            namespace GeneratorTests;
+
+            public static partial class ServiceCollectionExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IHandler<,>), CustomHandler = nameof(AddHandler))]
+                public static partial void AddHandlers();
+
+                private static void AddHandler<THandler, TQuery, TResult>()
+                    where THandler : class, IHandler<TQuery, TResult>
+                    where TQuery : class, IQuery<TResult>
+                    where TResult : System.Collections.Generic.IEnumerable<object>
+                {
+                }
+            }
+            """;
+
+        var services = """
+            namespace GeneratorTests;
+
+            public interface IQuery<T> { }
+            public interface IHandler<TQuery, TResult> where TQuery : IQuery<TResult> { }
+
+            public class StringsQuery : IQuery<string[]> { }
+            public class ScalarQuery : IQuery<int> { }
+
+            public class StringsHandler : IHandler<StringsQuery, string[]> { }
+            public class ScalarHandler : IHandler<ScalarQuery, int> { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServiceCollectionExtensions
+            {
+                public static partial void AddHandlers()
+                {
+                    AddHandler<global::GeneratorTests.StringsHandler, global::GeneratorTests.StringsQuery, string[]>();
+                }
+            }
+            """;
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
+    }
+
     private static Compilation CreateCompilation(params string[] source)
     {
         var path = Path.GetDirectoryName(typeof(object).Assembly.Location)!;

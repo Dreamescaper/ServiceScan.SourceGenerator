@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using ServiceScan.SourceGenerator.Model;
 
 namespace ServiceScan.SourceGenerator;
@@ -92,7 +93,7 @@ public partial class DependencyInjectionGenerator
                 continue;
 
             // Filter by custom handler method generic constraints
-            if (customHandlerMethod != null && !SatisfiesGenericConstraints(type, customHandlerMethod))
+            if (customHandlerMethod != null && !SatisfiesGenericConstraints(compilation, type, customHandlerMethod))
             {
                 continue;
             }
@@ -216,7 +217,7 @@ public partial class DependencyInjectionGenerator
             : new Regex($"^({Regex.Escape(wildcard).Replace(@"\*", ".*").Replace(",", "|")})$");
     }
 
-    private static bool SatisfiesGenericConstraints(INamedTypeSymbol type, IMethodSymbol customHandlerMethod)
+    private static bool SatisfiesGenericConstraints(Compilation compilation, INamedTypeSymbol type, IMethodSymbol customHandlerMethod)
     {
         if (customHandlerMethod.TypeParameters.Length == 0)
             return true;
@@ -226,10 +227,10 @@ public partial class DependencyInjectionGenerator
         var typeParameter = customHandlerMethod.TypeParameters[0];
 
         var visitedTypeParameters = new HashSet<ITypeParameterSymbol>(SymbolEqualityComparer.Default);
-        return SatisfiesGenericConstraints(type, typeParameter, customHandlerMethod, visitedTypeParameters);
+        return SatisfiesGenericConstraints(compilation, type, typeParameter, visitedTypeParameters);
     }
 
-    private static bool SatisfiesGenericConstraints(INamedTypeSymbol type, ITypeParameterSymbol typeParameter, IMethodSymbol customHandlerMethod, HashSet<ITypeParameterSymbol> visitedTypeParameters)
+    private static bool SatisfiesGenericConstraints(Compilation compilation, ITypeSymbol type, ITypeParameterSymbol typeParameter, HashSet<ITypeParameterSymbol> visitedTypeParameters)
     {
         // Prevent infinite recursion in circular constraint scenarios (e.g., X : ISmth<Y>, Y : ISmth<X>)
         if (!visitedTypeParameters.Add(typeParameter))
@@ -250,10 +251,12 @@ public partial class DependencyInjectionGenerator
         // Check constructor constraint
         if (typeParameter.HasConstructorConstraint)
         {
-            var hasPublicParameterlessConstructor = type.Constructors.Any(c =>
-                c.DeclaredAccessibility == Accessibility.Public &&
-                c.Parameters.Length == 0 &&
-                !c.IsStatic);
+            var hasPublicParameterlessConstructor =
+                type is INamedTypeSymbol namedType &&
+                namedType.Constructors.Any(c =>
+                    c.DeclaredAccessibility == Accessibility.Public &&
+                    c.Parameters.Length == 0 &&
+                    !c.IsStatic);
 
             if (!hasPublicParameterlessConstructor)
                 return false;
@@ -264,7 +267,7 @@ public partial class DependencyInjectionGenerator
         {
             if (constraintType is INamedTypeSymbol namedConstraintType)
             {
-                if (!SatisfiesConstraintType(type, namedConstraintType, customHandlerMethod, visitedTypeParameters))
+                if (!SatisfiesConstraintType(compilation, type, namedConstraintType, visitedTypeParameters))
                     return false;
             }
         }
@@ -272,32 +275,28 @@ public partial class DependencyInjectionGenerator
         return true;
     }
 
-    private static bool SatisfiesConstraintType(INamedTypeSymbol candidateType, INamedTypeSymbol constraintType, IMethodSymbol customHandlerMethod, HashSet<ITypeParameterSymbol> visitedTypeParameters)
+    private static bool SatisfiesConstraintType(Compilation compilation, ITypeSymbol candidateType, INamedTypeSymbol constraintType, HashSet<ITypeParameterSymbol> visitedTypeParameters)
     {
         var constraintHasTypeParameters = constraintType.TypeArguments.OfType<ITypeParameterSymbol>().Any();
 
         if (!constraintHasTypeParameters)
         {
-            return IsAssignableTo(candidateType, constraintType, out _);
+            return SatisfiesTypeConstraint(compilation, candidateType, constraintType);
         }
-        else
+
+        // Constraints containing method type parameters require matching a constructed
+        // interface or base type so those parameters can be checked recursively.
+        if (candidateType is not INamedTypeSymbol namedCandidateType ||
+            !IsAssignableTo(namedCandidateType, constraintType.OriginalDefinition, out var matchedTypes))
         {
-            // We handle the case when method has multiple type arguments, e.g.
-            // private static void CustomHandler<THandler, TCommand>(this IServiceCollection services)
-            //      where THandler : class, ICommandHandler<TCommand>
-            //      where TCommand : ISpecificCommand
-
-
-            // First we check that type definitions match. E.g. if MyHandlerImplementation has interface (one or many) ICommandHandler<>.
-            if (!IsAssignableTo(candidateType, constraintType.OriginalDefinition, out var matchedTypes))
-                return false;
-
-            // Then we need to check if any matched interfaces (let's say MyHandlerImplementation implements ICommandHandler<string> and ICommandHandler<MySpecificCommand>)
-            // have matching type parameters (e.g. string does not implement ISpecificCommand, but MySpecificCommand - does).
-            return matchedTypes.Any(matchedType => MatchedTypeSatisfiesConstraints(constraintType, customHandlerMethod, matchedType, visitedTypeParameters));
+            return false;
         }
 
-        static bool MatchedTypeSatisfiesConstraints(INamedTypeSymbol constraintType, IMethodSymbol customHandlerMethod, INamedTypeSymbol matchedType, HashSet<ITypeParameterSymbol> visitedTypeParameters)
+        // A candidate can implement several constructed versions of the same interface.
+        return matchedTypes.Any(matchedType =>
+            MatchedTypeSatisfiesConstraints(compilation, constraintType, matchedType, visitedTypeParameters));
+
+        static bool MatchedTypeSatisfiesConstraints(Compilation compilation, INamedTypeSymbol constraintType, INamedTypeSymbol matchedType, HashSet<ITypeParameterSymbol> visitedTypeParameters)
         {
             if (constraintType.TypeArguments.Length != matchedType.TypeArguments.Length)
                 return false;
@@ -308,27 +307,8 @@ public partial class DependencyInjectionGenerator
 
                 if (constraintType.TypeArguments[i] is ITypeParameterSymbol typeParameter)
                 {
-                    if (candidateTypeArgument is INamedTypeSymbol namedCandidate)
-                    {
-                        if (!SatisfiesGenericConstraints(namedCandidate, typeParameter, customHandlerMethod, visitedTypeParameters))
-                            return false;
-                    }
-                    else
-                    {
-                        // Non-named types (arrays, pointers, dynamic). Can't recurse into nested constraints,
-                        // but the simple constraints on typeParameter still apply.
-                        if (typeParameter.HasValueTypeConstraint) return false;
-                        if (typeParameter.HasUnmanagedTypeConstraint) return false;
-                        if (typeParameter.HasConstructorConstraint) return false;
-                        if (typeParameter.HasReferenceTypeConstraint && candidateTypeArgument.IsValueType) return false;
-
-                        foreach (var constraint in typeParameter.ConstraintTypes.OfType<INamedTypeSymbol>())
-                        {
-                            if (!candidateTypeArgument.AllInterfaces.Contains(constraint, SymbolEqualityComparer.Default)
-                                && !SymbolEqualityComparer.Default.Equals(candidateTypeArgument.BaseType, constraint))
-                                return false;
-                        }
-                    }
+                    if (!SatisfiesGenericConstraints(compilation, candidateTypeArgument, typeParameter, visitedTypeParameters))
+                        return false;
                 }
                 else
                 {
@@ -339,5 +319,18 @@ public partial class DependencyInjectionGenerator
 
             return true;
         }
+    }
+
+    private static bool SatisfiesTypeConstraint(Compilation compilation, ITypeSymbol candidateType, ITypeSymbol constraintType)
+    {
+        if (compilation is not CSharpCompilation csharpCompilation)
+            return false;
+
+        var conversion = csharpCompilation.ClassifyConversion(candidateType, constraintType);
+
+        // Generic constraints permit identity, implicit reference, and boxing conversions.
+        // User-defined implicit conversions do not satisfy generic constraints.
+        return conversion.IsImplicit &&
+               (conversion.IsIdentity || conversion.IsReference || conversion.IsBoxing);
     }
 }
