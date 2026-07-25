@@ -58,7 +58,16 @@ public partial class DependencyInjectionGenerator
 
             if (attribute.CustomHandler != null)
             {
-                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
+                var customHandlerMethod = GetCustomHandlerMethod(
+                    attribute,
+                    method.ContainingType,
+                    context.SemanticModel,
+                    position);
+
+                if (customHandlerMethod == null && attribute.CustomHandlerType == CustomHandlerType.Method)
+                {
+                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+                }
 
                 if (customHandlerMethod != null)
                 {
@@ -141,7 +150,16 @@ public partial class DependencyInjectionGenerator
             }
             else if (attribute.CustomHandler != null)
             {
-                var customHandlerMethod = method.ContainingType.GetMethod(attribute.CustomHandler, context.SemanticModel, position);
+                var customHandlerMethod = GetCustomHandlerMethod(
+                    attribute,
+                    method.ContainingType,
+                    context.SemanticModel,
+                    position);
+
+                if (customHandlerMethod == null && attribute.CustomHandlerType == CustomHandlerType.Method)
+                {
+                    return Diagnostic.Create(CustomHandlerMethodHasIncorrectSignature, attribute.Location);
+                }
 
                 if (customHandlerMethod != null)
                 {
@@ -184,5 +202,26 @@ public partial class DependencyInjectionGenerator
 
         var model = MethodModel.Create(method, context.TargetNode);
         return new MethodWithAttributesModel(model, [.. attributeData]);
+    }
+
+    /// <summary>
+    /// Resolves a custom handler on its explicitly named declaring type, or on the generated method's containing type
+    /// when no declaring type was specified.
+    /// </summary>
+    private static IMethodSymbol? GetCustomHandlerMethod(
+        AttributeModel attribute,
+        INamedTypeSymbol containingType,
+        SemanticModel semanticModel,
+        int position)
+    {
+        var handlerType = AttributeModel.GetExplicitHandlerDeclaringType(
+            attribute.Location,
+            semanticModel,
+            "Handler",
+            "CustomHandler");
+
+        return handlerType != null
+            ? handlerType.GetMethod(attribute.CustomHandler!, semanticModel, position, isStatic: true)
+            : containingType.GetMethod(attribute.CustomHandler!, semanticModel, position);
     }
 }

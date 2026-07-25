@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using ServiceScan.SourceGenerator.Extensions;
 using ServiceScan.SourceGenerator.Model;
 
 namespace ServiceScan.SourceGenerator;
@@ -51,7 +52,7 @@ public partial class DependencyInjectionGenerator
         }
 
         var customHandlerMethod = attribute.CustomHandler != null && attribute.CustomHandlerType == CustomHandlerType.Method
-            ? containingType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == attribute.CustomHandler)
+            ? GetCustomHandlerMethod(attribute, containingType, semanticModel, position)
             : null;
 
         foreach (var type in assemblies.SelectMany(GetTypesFromAssembly))

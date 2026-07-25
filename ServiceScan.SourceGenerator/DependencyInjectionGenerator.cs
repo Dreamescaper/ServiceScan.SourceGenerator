@@ -146,17 +146,15 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
     {
         if (handler.CustomHandlerType == CustomHandlerType.Template)
         {
-            return handler.HandlerMethodName;
+            return handler.HandlerTarget;
         }
 
         var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
-        if (handler.CustomHandlerType == CustomHandlerType.Method)
-        {
-            var genericArguments = string.Join(", ", handler.TypeArguments);
-            return $"{handler.HandlerMethodName}<{genericArguments}>({arguments});";
-        }
+        var genericArguments = handler.CustomHandlerType == CustomHandlerType.Method
+            ? $"<{string.Join(", ", handler.TypeArguments)}>"
+            : "";
 
-        return $"{handler.TypeName}.{handler.HandlerMethodName}({arguments});";
+        return $"{handler.HandlerTarget}{genericArguments}({arguments});";
     }
 
     private static string GenerateMethodSource(

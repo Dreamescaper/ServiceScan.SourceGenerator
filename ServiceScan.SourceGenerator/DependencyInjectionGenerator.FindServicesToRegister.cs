@@ -129,19 +129,22 @@ public partial class DependencyInjectionGenerator
                 {
                     var typeArguments = string.Join(", ", new[] { implementationTypeName }
                         .Concat(matchedType.TypeArguments.Select(a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))));
+                    var handlerTarget = GetCustomHandlerTarget(attribute, implementationTypeName);
 
                     if (attribute.CustomHandlerType == CustomHandlerType.Method)
-                        collectionItems.Add($"{attribute.CustomHandler}<{typeArguments}>({arguments})");
+                        collectionItems.Add($"{handlerTarget}<{typeArguments}>({arguments})");
                     else
-                        collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
+                        collectionItems.Add($"{handlerTarget}({arguments})");
                 }
             }
             else
             {
+                var handlerTarget = GetCustomHandlerTarget(attribute, implementationTypeName);
+
                 if (attribute.CustomHandlerType == CustomHandlerType.Method)
-                    collectionItems.Add($"{attribute.CustomHandler}<{implementationTypeName}>({arguments})");
+                    collectionItems.Add($"{handlerTarget}<{implementationTypeName}>({arguments})");
                 else
-                    collectionItems.Add($"{implementationTypeName}.{attribute.CustomHandler}({arguments})");
+                    collectionItems.Add($"{handlerTarget}({arguments})");
             }
         }
     }
@@ -153,6 +156,7 @@ public partial class DependencyInjectionGenerator
         List<CustomHandlerModel> customHandlers)
     {
         var implementationTypeName = implementationType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var handlerTarget = GetCustomHandlerTarget(attribute, implementationTypeName);
 
         if (attribute.CustomHandlerMethodTypeParametersCount > 1 && matchedTypes != null)
         {
@@ -166,8 +170,7 @@ public partial class DependencyInjectionGenerator
 
                 customHandlers.Add(new CustomHandlerModel(
                     attribute.CustomHandlerType.Value,
-                    attribute.CustomHandler,
-                    implementationTypeName,
+                    handlerTarget,
                     typeArguments));
             }
         }
@@ -175,9 +178,10 @@ public partial class DependencyInjectionGenerator
         {
             customHandlers.Add(new CustomHandlerModel(
                 attribute.CustomHandlerType.Value,
-                attribute.CustomHandler,
-                implementationTypeName,
-                [implementationTypeName]));
+                handlerTarget,
+                attribute.CustomHandlerType == CustomHandlerType.Method
+                    ? [implementationTypeName]
+                    : []));
         }
     }
 
@@ -194,13 +198,22 @@ public partial class DependencyInjectionGenerator
         customHandlers.Add(new CustomHandlerModel(
             Model.CustomHandlerType.Template,
             statement,
-            implementationTypeName,
             []));
     }
 
     private static string ExpandTemplate(string template, string typeName)
     {
         return TypePlaceholderRegex.Replace(template, typeName);
+    }
+
+    private static string GetCustomHandlerTarget(AttributeModel attribute, string implementationTypeName)
+    {
+        if (attribute.CustomHandlerType == CustomHandlerType.TypeMethod)
+            return $"{implementationTypeName}.{attribute.CustomHandler}";
+
+        return attribute.CustomHandlerDeclaringTypeName is null
+            ? attribute.CustomHandler!
+            : $"{attribute.CustomHandlerDeclaringTypeName}.{attribute.CustomHandler}";
     }
 
     private static IEnumerable<INamedTypeSymbol> GetSuitableInterfaces(ITypeSymbol type)
