@@ -1,7 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
 
 namespace ServiceScan.SourceGenerator.Tests;
 
@@ -1076,6 +1076,71 @@ public class CustomHandlerTests
                 {
                     HandleType<global::GeneratorTests.SmthX>();
                     HandleType<global::GeneratorTests.SmthY>();
+                }
+            }
+            """;
+        await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(expected);
+    }
+
+    [Test]
+    public async Task CustomHandler_HandlesArrayTypeArgumentInNestedConstraint()
+    {
+        // Regression: MatchedTypeSatisfiesConstraints used to bail on non-INamedTypeSymbol
+        // candidate type arguments, silently dropping handlers whose bound generic contains
+        // an array (e.g. IHandler<Q, byte[]> where the callback constrains Q : IQuery<TResult>).
+        var source = """
+            using ServiceScan.SourceGenerator;
+
+            namespace GeneratorTests;
+
+            public static partial class ServiceCollectionExtensions
+            {
+                [GenerateServiceRegistrations(AssignableTo = typeof(IHandler<,>), CustomHandler = nameof(AddHandler))]
+                public static partial void AddHandlers();
+
+                private static void AddHandler<THandler, TQuery, TResult>()
+                    where THandler : class, IHandler<TQuery, TResult>
+                    where TQuery : class, IQuery<TResult>
+                {
+                }
+            }
+            """;
+
+        var services = """
+            namespace GeneratorTests;
+
+            public interface IQuery<T> { }
+            public interface IHandler<TQuery, TResult> where TQuery : IQuery<TResult> { }
+
+            public class BytesQuery : IQuery<byte[]> { }
+            public class JaggedBytesQuery : IQuery<byte[][]> { }
+            public class StringsQuery : IQuery<string[]> { }
+            public class ScalarQuery : IQuery<int> { }
+
+            public class BytesHandler : IHandler<BytesQuery, byte[]> { }
+            public class JaggedBytesHandler : IHandler<JaggedBytesQuery, byte[][]> { }
+            public class StringsHandler : IHandler<StringsQuery, string[]> { }
+            public class ScalarHandler : IHandler<ScalarQuery, int> { }
+            """;
+
+        var compilation = CreateCompilation(source, services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var expected = """
+            namespace GeneratorTests;
+
+            public static partial class ServiceCollectionExtensions
+            {
+                public static partial void AddHandlers()
+                {
+                    AddHandler<global::GeneratorTests.BytesHandler, global::GeneratorTests.BytesQuery, byte[]>();
+                    AddHandler<global::GeneratorTests.JaggedBytesHandler, global::GeneratorTests.JaggedBytesQuery, byte[][]>();
+                    AddHandler<global::GeneratorTests.StringsHandler, global::GeneratorTests.StringsQuery, string[]>();
+                    AddHandler<global::GeneratorTests.ScalarHandler, global::GeneratorTests.ScalarQuery, int>();
                 }
             }
             """;

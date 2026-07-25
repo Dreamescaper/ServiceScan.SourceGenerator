@@ -304,13 +304,31 @@ public partial class DependencyInjectionGenerator
 
             for (var i = 0; i < constraintType.TypeArguments.Length; i++)
             {
-                if (matchedType.TypeArguments[i] is not INamedTypeSymbol candidateTypeArgument)
-                    return false;
+                var candidateTypeArgument = matchedType.TypeArguments[i];
 
                 if (constraintType.TypeArguments[i] is ITypeParameterSymbol typeParameter)
                 {
-                    if (!SatisfiesGenericConstraints(candidateTypeArgument, typeParameter, customHandlerMethod, visitedTypeParameters))
-                        return false;
+                    if (candidateTypeArgument is INamedTypeSymbol namedCandidate)
+                    {
+                        if (!SatisfiesGenericConstraints(namedCandidate, typeParameter, customHandlerMethod, visitedTypeParameters))
+                            return false;
+                    }
+                    else
+                    {
+                        // Non-named types (arrays, pointers, dynamic). Can't recurse into nested constraints,
+                        // but the simple constraints on typeParameter still apply.
+                        if (typeParameter.HasValueTypeConstraint) return false;
+                        if (typeParameter.HasUnmanagedTypeConstraint) return false;
+                        if (typeParameter.HasConstructorConstraint) return false;
+                        if (typeParameter.HasReferenceTypeConstraint && candidateTypeArgument.IsValueType) return false;
+
+                        foreach (var constraint in typeParameter.ConstraintTypes.OfType<INamedTypeSymbol>())
+                        {
+                            if (!candidateTypeArgument.AllInterfaces.Contains(constraint, SymbolEqualityComparer.Default)
+                                && !SymbolEqualityComparer.Default.Equals(candidateTypeArgument.BaseType, constraint))
+                                return false;
+                        }
+                    }
                 }
                 else
                 {
