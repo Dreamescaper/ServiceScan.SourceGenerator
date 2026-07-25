@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using ServiceScan.SourceGenerator.Extensions;
 
 namespace ServiceScan.SourceGenerator.Model;
@@ -25,6 +26,7 @@ record AttributeModel(
     string? CustomHandler,
     CustomHandlerType? CustomHandlerType,
     int CustomHandlerMethodTypeParametersCount,
+    string? CustomHandlerDeclaringTypeName,
     bool AsImplementedInterfaces,
     bool AsSelf,
     Location Location,
@@ -36,6 +38,9 @@ record AttributeModel(
     public static AttributeModel Create(AttributeData attribute, IMethodSymbol method, SemanticModel semanticModel)
     {
         var position = attribute.ApplicationSyntaxReference?.Span.Start ?? 0;
+        var syntax = attribute.ApplicationSyntaxReference.SyntaxTree;
+        var textSpan = attribute.ApplicationSyntaxReference.Span;
+        var location = Location.Create(syntax, textSpan);
 
         var assemblyType = attribute.NamedArguments.FirstOrDefault(a => a.Key == "FromAssemblyOf").Value.Value as INamedTypeSymbol;
         var assemblyNameFilter = attribute.NamedArguments.FirstOrDefault(a => a.Key == "AssemblyNameFilter").Value.Value as string;
@@ -71,11 +76,25 @@ record AttributeModel(
 
         CustomHandlerType? customHandlerType = null;
         var customHandlerGenericParameters = 0;
+        string? customHandlerDeclaringTypeName = null;
         if (customHandler != null)
         {
-            var customHandlerMethod = method.ContainingType.GetMethod(customHandler, semanticModel, position);
+            var explicitHandlerType = GetExplicitHandlerDeclaringType(location, semanticModel, "Handler", "CustomHandler");
+            IMethodSymbol? customHandlerMethod;
 
-            customHandlerType = customHandlerMethod != null ? Model.CustomHandlerType.Method : Model.CustomHandlerType.TypeMethod;
+            if (explicitHandlerType != null)
+            {
+                customHandlerMethod = explicitHandlerType.GetMethod(customHandler, semanticModel, position, isStatic: true);
+                customHandlerDeclaringTypeName = explicitHandlerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            }
+            else
+            {
+                customHandlerMethod = method.ContainingType.GetMethod(customHandler, semanticModel, position);
+            }
+
+            customHandlerType = customHandlerMethod != null || explicitHandlerType != null
+                ? Model.CustomHandlerType.Method
+                : Model.CustomHandlerType.TypeMethod;
             customHandlerGenericParameters = customHandlerMethod?.TypeParameters.Length ?? 0;
         }
 
@@ -110,10 +129,6 @@ record AttributeModel(
             _ => "Transient"
         };
 
-        var syntax = attribute.ApplicationSyntaxReference.SyntaxTree;
-        var textSpan = attribute.ApplicationSyntaxReference.Span;
-        var location = Location.Create(syntax, textSpan);
-
         var hasError = assemblyType is { TypeKind: TypeKind.Error }
             || assignableTo is { TypeKind: TypeKind.Error }
             || attributeFilterType is { TypeKind: TypeKind.Error };
@@ -136,10 +151,45 @@ record AttributeModel(
             customHandler,
             customHandlerType,
             customHandlerGenericParameters,
+            customHandlerDeclaringTypeName,
             asImplementedInterfaces,
             asSelf,
             location,
             hasError,
             handlerTemplate);
+    }
+
+    /// <summary>
+    /// Extracts the declaring type from a <c>nameof(Type.Method)</c> attribute argument.
+    /// </summary>
+    /// <param name="attributeLocation">The location of the attribute containing the handler argument.</param>
+    /// <param name="semanticModel">The semantic model used to resolve the type symbol.</param>
+    /// <param name="argumentNames">The supported attribute argument names to inspect.</param>
+    /// <returns>The declaring type when the handler is specified as <c>nameof(Type.Method)</c>; otherwise, <see langword="null"/>.</returns>
+    internal static INamedTypeSymbol? GetExplicitHandlerDeclaringType(
+        Location attributeLocation,
+        SemanticModel semanticModel,
+        params string[] argumentNames)
+    {
+        if (attributeLocation.SourceTree?.GetRoot().FindNode(attributeLocation.SourceSpan) is not AttributeSyntax attributeSyntax)
+            return null;
+
+        var handlerArgument = attributeSyntax.ArgumentList?.Arguments
+            .FirstOrDefault(a => a.NameEquals?.Name.Identifier.ValueText is { } name && argumentNames.Contains(name));
+
+        if (handlerArgument?.Expression is not InvocationExpressionSyntax
+            {
+                Expression: IdentifierNameSyntax { Identifier.ValueText: "nameof" },
+                ArgumentList.Arguments: [{ Expression: MemberAccessExpressionSyntax memberAccessExpression }]
+            })
+        {
+            return null;
+        }
+
+        var symbol = semanticModel.GetSymbolInfo(memberAccessExpression.Expression).Symbol;
+        if (symbol is IAliasSymbol aliasSymbol)
+            symbol = aliasSymbol.Target;
+
+        return symbol as INamedTypeSymbol;
     }
 }
