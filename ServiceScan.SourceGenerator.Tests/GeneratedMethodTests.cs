@@ -49,7 +49,7 @@ public class GeneratedMethodTests
 
             {{classAccessModifier}} static partial class ServicesExtensions
             {
-                {{methodAccessModifier}} static partial IServiceCollection AddServices(this IServiceCollection services)
+                {{methodAccessModifier}} static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddServices(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                     return services;
@@ -89,7 +89,7 @@ public class GeneratedMethodTests
 
             public static partial class ServicesExtensions
             {
-                public static partial void AddServices(this IServiceCollection services)
+                public static partial void AddServices(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
@@ -128,7 +128,7 @@ public class GeneratedMethodTests
 
             public static partial class ServicesExtensions
             {
-                public static partial IServiceCollection AddServices( IServiceCollection services)
+                public static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddServices( global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                     return services;
@@ -168,7 +168,7 @@ public class GeneratedMethodTests
 
             public partial class ServiceType
             {
-                private partial void AddServices( IServiceCollection services)
+                private partial void AddServices( global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
@@ -206,7 +206,7 @@ public class GeneratedMethodTests
 
             public static partial class ServicesExtensions
             {
-                public static partial IServiceCollection AddServices(this IServiceCollection services)
+                public static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddServices(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                     return services;
@@ -246,7 +246,7 @@ public class GeneratedMethodTests
 
             public static partial class ServicesExtensions
             {
-                public static partial IServiceCollection AddServices(this IServiceCollection strangeServices)
+                public static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddServices(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection strangeServices)
                 {
                     strangeServices.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                     return strangeServices;

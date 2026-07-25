@@ -31,7 +31,7 @@ public static class Sources
 
             public static partial class ServicesExtensions
             {
-                public static partial IServiceCollection AddServices(this IServiceCollection services)
+                public static partial global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddServices(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
                 {
                     {{services}}
                 }

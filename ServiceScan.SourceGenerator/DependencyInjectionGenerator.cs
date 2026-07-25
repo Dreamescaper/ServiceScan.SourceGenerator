@@ -80,81 +80,103 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
         // too long or complex to compile") caps that around ~1000 links. Statement-per-line
         // avoids the cap entirely and matches the shape already used by
         // GenerateCustomHandlingSource.
-        var statements = registrations
-            .Select(registration =>
-            {
-                string call;
-                if (registration.IsOpenGeneric)
-                {
-                    call = $"Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))";
-                }
-                else if (registration.ResolveImplementation)
-                {
-                    call = $"Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())";
-                }
-                else
-                {
-                    var addMethod = registration.KeySelector != null
-                        ? $"AddKeyed{registration.Lifetime}"
-                        : $"Add{registration.Lifetime}";
+        var statements = registrations.Select(registration =>
+            GenerateRegistrationStatement(method.ParameterName, registration));
 
-                    var keySelectorInvocation = registration.KeySelectorType switch
-                    {
-                        KeySelectorType.GenericMethod => $"{registration.KeySelector}<{registration.ImplementationTypeName}>()",
-                        KeySelectorType.Method => $"{registration.KeySelector}(typeof({registration.ImplementationTypeName}))",
-                        KeySelectorType.TypeMember => $"{registration.ImplementationTypeName}.{registration.KeySelector}",
-                        _ => null
-                    };
+        return GenerateMethodSource(
+            method,
+            statements,
+            usingNamespace: "Microsoft.Extensions.DependencyInjection",
+            finalReturnFragment: GenerateParameterReturnFragment(method));
+    }
 
-                    call = $"{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keySelectorInvocation})";
-                }
-
-                return $"{method.ParameterName}.{call};";
-            })
-            .ToList();
-
-        var returnType = method.ReturnsVoid ? "void" : "IServiceCollection";
-        var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
-
-        var registrationsCode = string.Join("\n        ", statements);
-        var returnStatement = method.ReturnsVoid ? "" : $"return {method.ParameterName};";
-
-        string methodBody;
-        if (statements.Count == 0)
-            methodBody = returnStatement;
-        else if (method.ReturnsVoid)
-            methodBody = registrationsCode;
+    private static string GenerateRegistrationStatement(
+        string parameterName,
+        ServiceRegistrationModel registration)
+    {
+        string call;
+        if (registration.IsOpenGeneric)
+        {
+            call = $"Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))";
+        }
+        else if (registration.ResolveImplementation)
+        {
+            call = $"Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())";
+        }
         else
-            methodBody = $"{registrationsCode}\n        {returnStatement}";
+        {
+            var addMethod = registration.KeySelector != null
+                ? $"AddKeyed{registration.Lifetime}"
+                : $"Add{registration.Lifetime}";
 
-        var source = $$"""
-                using Microsoft.Extensions.DependencyInjection;
+            var keySelectorInvocation = registration.KeySelectorType switch
+            {
+                KeySelectorType.GenericMethod => $"{registration.KeySelector}<{registration.ImplementationTypeName}>()",
+                KeySelectorType.Method => $"{registration.KeySelector}(typeof({registration.ImplementationTypeName}))",
+                KeySelectorType.TypeMember => $"{registration.ImplementationTypeName}.{registration.KeySelector}",
+                _ => null
+            };
 
-                {{namespaceDeclaration}}
+            call = $"{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keySelectorInvocation})";
+        }
 
-                {{method.TypeModifiers}} class {{method.TypeName}}
-                {
-                    {{method.MethodModifiers}} {{returnType}} {{method.MethodName}}({{(method.IsExtensionMethod ? "this" : "")}} IServiceCollection {{method.ParameterName}})
-                    {
-                        {{methodBody}}
-                    }
-                }
-                """;
-
-        return source;
+        return $"{parameterName}.{call};";
     }
 
     private static string GenerateCollectionSource(MethodModel method, EquatableArray<string> collectionItems)
     {
+        var itemsCode = string.Join(",\n", collectionItems.Select(item => $"            {item}"));
+        var returnFragment = $"return [\n{itemsCode}\n        ];";
+
+        return GenerateMethodSource(method, [], finalReturnFragment: returnFragment);
+    }
+
+    private static string GenerateCustomHandlingSource(MethodModel method, EquatableArray<CustomHandlerModel> customHandlers)
+    {
+        var invocations = customHandlers.Select(handler =>
+            GenerateCustomHandlerStatement(method, handler));
+
+        return GenerateMethodSource(
+            method,
+            invocations,
+            finalReturnFragment: GenerateParameterReturnFragment(method));
+    }
+
+    private static string GenerateCustomHandlerStatement(MethodModel method, CustomHandlerModel handler)
+    {
+        if (handler.CustomHandlerType == CustomHandlerType.Template)
+        {
+            return handler.HandlerMethodName;
+        }
+
+        var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
+        if (handler.CustomHandlerType == CustomHandlerType.Method)
+        {
+            var genericArguments = string.Join(", ", handler.TypeArguments);
+            return $"{handler.HandlerMethodName}<{genericArguments}>({arguments});";
+        }
+
+        return $"{handler.TypeName}.{handler.HandlerMethodName}({arguments});";
+    }
+
+    private static string GenerateMethodSource(
+        MethodModel method,
+        IEnumerable<string> bodyFragments,
+        string? usingNamespace = null,
+        string? finalReturnFragment = null)
+    {
+        var fragments = bodyFragments.ToList();
+        if (finalReturnFragment != null)
+            fragments.Add(finalReturnFragment);
+
+        var methodBody = string.Join("\n        ", fragments);
+        var usingDeclaration = usingNamespace is null ? "" : $"using {usingNamespace};\n\n";
         var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
         var parameters = string.Join(",", method.Parameters.Select((p, i) =>
             $"{(i == 0 && method.IsExtensionMethod ? "this" : "")} {p.Type} {p.Name}"));
 
-        var itemsCode = string.Join(",\n", collectionItems.Select(item => $"            {item}"));
-        var methodBody = $"return [\n{itemsCode}\n        ];";
-
-        var source = $$"""
-                {{namespaceDeclaration}}
+        return $$"""
+                {{usingDeclaration}}{{namespaceDeclaration}}
 
                 {{method.TypeModifiers}} class {{method.TypeName}}
                 {
@@ -164,52 +186,10 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
                     }
                 }
                 """;
-
-        return source;
     }
 
-    private static string GenerateCustomHandlingSource(MethodModel method, EquatableArray<CustomHandlerModel> customHandlers)
+    private static string? GenerateParameterReturnFragment(MethodModel method)
     {
-        var invocations = string.Join("\n", customHandlers.Select(h =>
-        {
-            if (h.CustomHandlerType == CustomHandlerType.Template)
-            {
-                return $"        {h.HandlerMethodName}";
-            }
-            else if (h.CustomHandlerType == CustomHandlerType.Method)
-            {
-                var genericArguments = string.Join(", ", h.TypeArguments);
-                var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
-                return $"        {h.HandlerMethodName}<{genericArguments}>({arguments});";
-            }
-            else
-            {
-                var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
-                return $"        {h.TypeName}.{h.HandlerMethodName}({arguments});";
-            }
-        }));
-
-        var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
-        var parameters = string.Join(",", method.Parameters.Select((p, i) =>
-            $"{(i == 0 && method.IsExtensionMethod ? "this" : "")} {p.Type} {p.Name}"));
-
-        var methodBody = $$"""
-                {{invocations.Trim()}}
-                {{(method.ReturnsVoid ? "" : $"return {method.ParameterName};")}}
-        """;
-
-        var source = $$"""
-                {{namespaceDeclaration}}
-
-                {{method.TypeModifiers}} class {{method.TypeName}}
-                {
-                    {{method.MethodModifiers}} {{method.ReturnType}} {{method.MethodName}}({{parameters}})
-                    {
-                        {{methodBody.Trim()}}
-                    }
-                }
-                """;
-
-        return source;
+        return method.ReturnsVoid ? null : $"return {method.ParameterName};";
     }
 }
