@@ -6,7 +6,14 @@ namespace ServiceScan.SourceGenerator;
 
 using CombinedModel = (DiagnosticModel<MethodWithAttributesModel> Model, Compilation Compilation);
 
-// We only compare Model here and ignore Compilation, as I don't want to run it on every input.
+// Intentionally ignore Compilation changes when the attributed method model is unchanged.
+//
+// Type discovery scans whole assemblies and can walk base types and implemented interfaces.
+// Treating every new IDE Compilation as a change would repeat that scan on virtually every
+// typed character. The tradeoff is that the IDE's generated-code view can remain stale when
+// only a candidate type changes. A command-line/MSBuild compilation creates a fresh generator
+// driver and therefore still scans the current compilation. See
+// docs/incremental-generator-design.md for the full rationale.
 internal class CombinedProviderComparer : IEqualityComparer<CombinedModel>
 {
     public static readonly CombinedProviderComparer Instance = new();
