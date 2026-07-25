@@ -1,7 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
 
 namespace ServiceScan.SourceGenerator.Tests;
 
@@ -51,8 +51,8 @@ public class GeneratedMethodTests
             {
                 {{methodAccessModifier}} static partial IServiceCollection AddServices(this IServiceCollection services)
                 {
-                    return services
-                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    return services;
                 }
             }
             """;
@@ -91,8 +91,7 @@ public class GeneratedMethodTests
             {
                 public static partial void AddServices(this IServiceCollection services)
                 {
-                    services
-                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;
@@ -131,8 +130,8 @@ public class GeneratedMethodTests
             {
                 public static partial IServiceCollection AddServices( IServiceCollection services)
                 {
-                    return services
-                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    return services;
                 }
             }
             """;
@@ -171,8 +170,7 @@ public class GeneratedMethodTests
             {
                 private partial void AddServices( IServiceCollection services)
                 {
-                    services
-                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
                 }
             }
             """;
@@ -210,8 +208,8 @@ public class GeneratedMethodTests
             {
                 public static partial IServiceCollection AddServices(this IServiceCollection services)
                 {
-                    return services
-                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    return services;
                 }
             }
             """;
@@ -250,8 +248,8 @@ public class GeneratedMethodTests
             {
                 public static partial IServiceCollection AddServices(this IServiceCollection strangeServices)
                 {
-                    return strangeServices
-                        .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    strangeServices.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService>();
+                    return strangeServices;
                 }
             }
             """;

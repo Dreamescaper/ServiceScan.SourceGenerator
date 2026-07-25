@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -73,45 +74,58 @@ public partial class DependencyInjectionGenerator : IIncrementalGenerator
 
     private static string GenerateRegistrationsSource(MethodModel method, EquatableArray<ServiceRegistrationModel> registrations)
     {
-        var registrationsCode = string.Concat(registrations
+        // Emit one AddXxx call per statement rather than a single fluent chain. A chained
+        // shape (services.Add()...Add()...Add();) is a single expression whose parse tree
+        // depth grows linearly with the registration count; Roslyn's CS8078 ("expression is
+        // too long or complex to compile") caps that around ~1000 links. Statement-per-line
+        // avoids the cap entirely and matches the shape already used by
+        // GenerateCustomHandlingSource.
+        var statements = registrations
             .Select(registration =>
             {
+                string call;
                 if (registration.IsOpenGeneric)
                 {
-                    return $".Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))";
+                    call = $"Add{registration.Lifetime}(typeof({registration.ServiceTypeName}), typeof({registration.ImplementationTypeName}))";
+                }
+                else if (registration.ResolveImplementation)
+                {
+                    call = $"Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())";
                 }
                 else
                 {
-                    if (registration.ResolveImplementation)
-                    {
-                        return $".Add{registration.Lifetime}<{registration.ServiceTypeName}>(s => s.GetRequiredService<{registration.ImplementationTypeName}>())";
-                    }
-                    else
-                    {
-                        var addMethod = registration.KeySelector != null
-                            ? $"AddKeyed{registration.Lifetime}"
-                            : $"Add{registration.Lifetime}";
+                    var addMethod = registration.KeySelector != null
+                        ? $"AddKeyed{registration.Lifetime}"
+                        : $"Add{registration.Lifetime}";
 
-                        var keySelectorInvocation = registration.KeySelectorType switch
-                        {
-                            KeySelectorType.GenericMethod => $"{registration.KeySelector}<{registration.ImplementationTypeName}>()",
-                            KeySelectorType.Method => $"{registration.KeySelector}(typeof({registration.ImplementationTypeName}))",
-                            KeySelectorType.TypeMember => $"{registration.ImplementationTypeName}.{registration.KeySelector}",
-                            _ => null
-                        };
+                    var keySelectorInvocation = registration.KeySelectorType switch
+                    {
+                        KeySelectorType.GenericMethod => $"{registration.KeySelector}<{registration.ImplementationTypeName}>()",
+                        KeySelectorType.Method => $"{registration.KeySelector}(typeof({registration.ImplementationTypeName}))",
+                        KeySelectorType.TypeMember => $"{registration.ImplementationTypeName}.{registration.KeySelector}",
+                        _ => null
+                    };
 
-                        return $".{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keySelectorInvocation})";
-                    }
+                    call = $"{addMethod}<{registration.ServiceTypeName}, {registration.ImplementationTypeName}>({keySelectorInvocation})";
                 }
+
+                return $"{method.ParameterName}.{call};";
             })
-            .Select(line => $"\n            {line}"));
+            .ToList();
 
         var returnType = method.ReturnsVoid ? "void" : "IServiceCollection";
         var namespaceDeclaration = method.Namespace is null ? "" : $"namespace {method.Namespace};";
 
-        var methodBody = registrations.Count == 0 && method.ReturnsVoid
-            ? ""
-            : $$"""{{(method.ReturnsVoid ? "" : "return ")}}{{method.ParameterName}}{{registrationsCode}};""";
+        var registrationsCode = string.Join("\n        ", statements);
+        var returnStatement = method.ReturnsVoid ? "" : $"return {method.ParameterName};";
+
+        string methodBody;
+        if (statements.Count == 0)
+            methodBody = returnStatement;
+        else if (method.ReturnsVoid)
+            methodBody = registrationsCode;
+        else
+            methodBody = $"{registrationsCode}\n        {returnStatement}";
 
         var source = $$"""
                 using Microsoft.Extensions.DependencyInjection;

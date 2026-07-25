@@ -1,7 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
 
 namespace ServiceScan.SourceGenerator.Tests;
 
@@ -33,9 +33,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .Add{lifetime}<global::GeneratorTests.IService, global::GeneratorTests.MyService1>()
-                .Add{lifetime}<global::GeneratorTests.IService, global::GeneratorTests.MyService2>();
+            services.Add{lifetime}<global::GeneratorTests.IService, global::GeneratorTests.MyService1>();
+            services.Add{lifetime}<global::GeneratorTests.IService, global::GeneratorTests.MyService2>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -52,9 +52,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::External.IExternalService, global::External.ExternalService1>()
-                .AddTransient<global::External.IExternalService, global::External.ExternalService2>();
+            services.AddTransient<global::External.IExternalService, global::External.ExternalService1>();
+            services.AddTransient<global::External.IExternalService, global::External.ExternalService2>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -94,9 +94,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddScoped<global::Core.IService, global::Module1.MyService1>()
-                .AddScoped<global::Core.IService, global::Module2.MyService2>();
+            services.AddScoped<global::Core.IService, global::Module1.MyService1>();
+            services.AddScoped<global::Core.IService, global::Module2.MyService2>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -123,9 +123,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>()
-                .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>();
+            services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>();
+            services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -152,9 +152,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.BaseType, global::GeneratorTests.MyService1>()
-                .AddTransient<global::GeneratorTests.BaseType, global::GeneratorTests.MyService2>();
+            services.AddTransient<global::GeneratorTests.BaseType, global::GeneratorTests.MyService1>();
+            services.AddTransient<global::GeneratorTests.BaseType, global::GeneratorTests.MyService2>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -180,9 +180,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntService>()
-                .AddTransient<global::GeneratorTests.IService<string>, global::GeneratorTests.MyStringService>();
+            services.AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntService>();
+            services.AddTransient<global::GeneratorTests.IService<string>, global::GeneratorTests.MyStringService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -208,9 +208,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntAndStringService>()
-                .AddTransient<global::GeneratorTests.IService<string>, global::GeneratorTests.MyIntAndStringService>();
+            services.AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntAndStringService>();
+            services.AddTransient<global::GeneratorTests.IService<string>, global::GeneratorTests.MyIntAndStringService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -235,10 +235,10 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddSingleton<global::GeneratorTests.MyIntAndStringService, global::GeneratorTests.MyIntAndStringService>()
-                .AddSingleton<global::GeneratorTests.IService<int>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>())
-                .AddSingleton<global::GeneratorTests.IService<string>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>());
+            services.AddSingleton<global::GeneratorTests.MyIntAndStringService, global::GeneratorTests.MyIntAndStringService>();
+            services.AddSingleton<global::GeneratorTests.IService<int>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>());
+            services.AddSingleton<global::GeneratorTests.IService<string>>(s => s.GetRequiredService<global::GeneratorTests.MyIntAndStringService>());
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -264,8 +264,8 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntService>();
+            services.AddTransient<global::GeneratorTests.IService<int>, global::GeneratorTests.MyIntService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -291,9 +291,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.AbstractService, global::GeneratorTests.MyService1>()
-                .AddTransient<global::GeneratorTests.AbstractService, global::GeneratorTests.MyService2>();
+            services.AddTransient<global::GeneratorTests.AbstractService, global::GeneratorTests.MyService1>();
+            services.AddTransient<global::GeneratorTests.AbstractService, global::GeneratorTests.MyService2>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -319,9 +319,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.MyService1, global::GeneratorTests.MyService1>()
-                .AddTransient<global::GeneratorTests.MyService2, global::GeneratorTests.MyService2>();
+            services.AddTransient<global::GeneratorTests.MyService1, global::GeneratorTests.MyService1>();
+            services.AddTransient<global::GeneratorTests.MyService2, global::GeneratorTests.MyService2>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -345,8 +345,8 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.MyService, global::GeneratorTests.MyService>();
+            services.AddTransient<global::GeneratorTests.MyService, global::GeneratorTests.MyService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -372,9 +372,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.AbstractService<int>, global::GeneratorTests.MyIntService>()
-                .AddTransient<global::GeneratorTests.AbstractService<string>, global::GeneratorTests.MyStringService>();
+            services.AddTransient<global::GeneratorTests.AbstractService<int>, global::GeneratorTests.MyIntService>();
+            services.AddTransient<global::GeneratorTests.AbstractService<string>, global::GeneratorTests.MyStringService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -400,9 +400,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient(typeof(global::GeneratorTests.IGenericService<>), typeof(global::GeneratorTests.MyService1<>))
-                .AddTransient(typeof(global::GeneratorTests.IGenericService<>), typeof(global::GeneratorTests.MyService2<>));
+            services.AddTransient(typeof(global::GeneratorTests.IGenericService<>), typeof(global::GeneratorTests.MyService1<>));
+            services.AddTransient(typeof(global::GeneratorTests.IGenericService<>), typeof(global::GeneratorTests.MyService2<>));
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -428,9 +428,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient(typeof(global::GeneratorTests.IService), typeof(global::GeneratorTests.MyService1<>))
-                .AddTransient(typeof(global::GeneratorTests.IService), typeof(global::GeneratorTests.MyService2<>));
+            services.AddTransient(typeof(global::GeneratorTests.IService), typeof(global::GeneratorTests.MyService1<>));
+            services.AddTransient(typeof(global::GeneratorTests.IService), typeof(global::GeneratorTests.MyService2<>));
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -457,9 +457,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-                .AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
+            services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+            services.AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -494,9 +494,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-                .AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
+            services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+            services.AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -530,8 +530,8 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+            services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -558,9 +558,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-                .AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
+            services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+            services.AddTransient<global::GeneratorTests.MySecondService, global::GeneratorTests.MySecondService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -586,9 +586,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-        return services
-            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+        services.AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        return services;
         """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -622,9 +622,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-        return services
-            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+        services.AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        return services;
         """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -660,9 +660,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-        return services
-            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-            .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+        services.AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        return services;
         """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -692,9 +692,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-        return services
-            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+        services.AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        return services;
         """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -724,9 +724,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-        return services
-            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+        services.AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        return services;
         """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -758,9 +758,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-        return services
-            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-            .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+        services.AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        return services;
         """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -792,10 +792,10 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-        return services
-            .AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>()
-            .AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>()
-            .AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        services.AddTransient<global::GeneratorTests.MyFirstService, global::GeneratorTests.MyFirstService>();
+        services.AddTransient<global::GeneratorTests.ThirdService, global::GeneratorTests.ThirdService>();
+        services.AddTransient<global::GeneratorTests.FourthService, global::GeneratorTests.FourthService>();
+        return services;
         """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -824,9 +824,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-                             return services
-                                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyFirstService>()
-                                 .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyThirdService>();
+                             services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyFirstService>();
+                             services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.MyThirdService>();
+                             return services;
                              """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -855,10 +855,10 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.IServiceA, global::GeneratorTests.MyFirstService>()
-                .AddTransient<global::GeneratorTests.IServiceB, global::GeneratorTests.MySecondService>()
-                .AddTransient<global::GeneratorTests.IServiceC, global::GeneratorTests.MySecondService>();
+            services.AddTransient<global::GeneratorTests.IServiceA, global::GeneratorTests.MyFirstService>();
+            services.AddTransient<global::GeneratorTests.IServiceB, global::GeneratorTests.MySecondService>();
+            services.AddTransient<global::GeneratorTests.IServiceC, global::GeneratorTests.MySecondService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -890,10 +890,10 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddSingleton<global::GeneratorTests.MyService, global::GeneratorTests.MyService>()
-                .AddSingleton<global::GeneratorTests.IServiceA>(s => s.GetRequiredService<global::GeneratorTests.MyService>())
-                .AddSingleton<global::GeneratorTests.IServiceB>(s => s.GetRequiredService<global::GeneratorTests.MyService>());
+            services.AddSingleton<global::GeneratorTests.MyService, global::GeneratorTests.MyService>();
+            services.AddSingleton<global::GeneratorTests.IServiceA>(s => s.GetRequiredService<global::GeneratorTests.MyService>());
+            services.AddSingleton<global::GeneratorTests.IServiceB>(s => s.GetRequiredService<global::GeneratorTests.MyService>());
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -929,10 +929,10 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.IServiceA, global::GeneratorTests.MyFirstService>()
-                .AddTransient<global::GeneratorTests.IServiceB, global::GeneratorTests.MySecondService>()
-                .AddTransient<global::GeneratorTests.IServiceC, global::GeneratorTests.MySecondService>();
+            services.AddTransient<global::GeneratorTests.IServiceA, global::GeneratorTests.MyFirstService>();
+            services.AddTransient<global::GeneratorTests.IServiceB, global::GeneratorTests.MySecondService>();
+            services.AddTransient<global::GeneratorTests.IServiceC, global::GeneratorTests.MySecondService>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -966,10 +966,10 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType1.MyService1>()
-                .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType1.MyService2>()
-                .AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType2.MyService1>();
+            services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType1.MyService1>();
+            services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType1.MyService2>();
+            services.AddTransient<global::GeneratorTests.IService, global::GeneratorTests.ParentType2.MyService1>();
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -998,9 +998,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(GetName<global::GeneratorTests.MyService1>())
-                .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(GetName<global::GeneratorTests.MyService2>());
+            services.AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(GetName<global::GeneratorTests.MyService1>());
+            services.AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(GetName<global::GeneratorTests.MyService2>());
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -1029,9 +1029,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(GetName(typeof(global::GeneratorTests.MyService1)))
-                .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(GetName(typeof(global::GeneratorTests.MyService2)));
+            services.AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(GetName(typeof(global::GeneratorTests.MyService1)));
+            services.AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(GetName(typeof(global::GeneratorTests.MyService2)));
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -1065,9 +1065,9 @@ public class AddServicesTests
             .GetRunResult();
 
         var registrations = $"""
-            return services
-                .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(global::GeneratorTests.MyService1.Key)
-                .AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(global::GeneratorTests.MyService2.Key);
+            services.AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService1>(global::GeneratorTests.MyService1.Key);
+            services.AddKeyedTransient<global::GeneratorTests.IService, global::GeneratorTests.MyService2>(global::GeneratorTests.MyService2.Key);
+            return services;
             """;
         await Assert.That(results.GeneratedTrees[2].ToString()).IsEqualTo(Sources.GetMethodImplementation(registrations));
     }
@@ -1086,6 +1086,48 @@ public class AddServicesTests
 
         // Two files: one for EmbeddedAttribute and one for generated attribute itself.
         await Assert.That(results.GeneratedTrees.Length).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task LargeAssemblyCompilesWithoutCs8078()
+    {
+        // Regression: Roslyn CS8078 ("expression is too long or complex to compile") caps
+        // single-expression parse depth around ~1000. Emit N=1200 handlers and verify that
+        // statement-per-line emit (services.Add(); services.Add(); ...) compiles cleanly —
+        // a single 1200-link fluent chain would trip CS8078.
+        const int handlerCount = 1200;
+
+        var handlerDecls = string.Join("\n", Enumerable.Range(0, handlerCount)
+            .Select(i => $"public class Service{i} : IService {{ }}"));
+
+        var services = $$"""
+            namespace GeneratorTests;
+
+            public interface IService { }
+            {{handlerDecls}}
+            """;
+
+        var compilation = CreateCompilation(
+            Sources.MethodWithAttribute("[GenerateServiceRegistrations(AssignableTo = typeof(IService))]"),
+            services);
+
+        var results = CSharpGeneratorDriver
+            .Create(_generator)
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        var generated = results.GeneratedTrees[2].ToString();
+
+        // All 1200 registrations present.
+        var addTransientCount = System.Text.RegularExpressions.Regex.Matches(generated, @"\.AddTransient<").Count;
+        await Assert.That(addTransientCount).IsEqualTo(handlerCount);
+
+        // Compile the generated code as part of the original compilation. Fails with CS8078
+        // if the emitter regressed to a single fluent chain.
+        var withGenerated = compilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(generated));
+        var diagnostics = withGenerated.GetDiagnostics();
+        var cs8078 = diagnostics.Where(d => d.Id == "CS8078").ToArray();
+        await Assert.That(cs8078.Length).IsEqualTo(0);
     }
 
     private static Compilation CreateCompilation(params string[] source)
